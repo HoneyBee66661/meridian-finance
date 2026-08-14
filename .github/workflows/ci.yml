@@ -61,10 +61,13 @@ jobs:
         run: forge test -vvv
 
       - name: Gas snapshot gate
-        # Fails if any test's gas moves by more than 20 units vs the committed
-        # .gas-snapshot. This is the enforcement point for the Ch 7/8 borrow-path
-        # budget (net ~101,500 gas). --diff prints the table on failure.
-        run: forge snapshot --check --diff --tolerance 20
+        # Fails if any deterministic test's gas moves by more than 20 units vs
+        # the committed .gas-snapshot. Fuzz/invariant rows are excluded
+        # (--no-match-test) — forge 1.7.x μ rows are not byte-stable across
+        # invocations even with a pinned seed (Ch 13/14 finding): the gate
+        # covers deterministic rows only. --check prints the diff on failure
+        # (--diff is not combinable with --check in forge 1.7.x).
+        run: forge snapshot --check --tolerance 20 --no-match-test "\([^)]|invariant_"
 
       - name: Coverage
         run: forge coverage --report summary
