@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           ref: ${{ github.ref }}   # exact tag, not a branch head
@@ -50,7 +50,7 @@ jobs:
   #   environment: testnet          # environment protection = human approval gate
   #   runs-on: ubuntu-latest
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v7
   #     - uses: foundry-rs/foundry-toolchain@v1
   #     - name: Deploy (Ch 39)
   #       run: forge script script/Deploy.s.sol --rpc-url ${{ secrets.MAINNET_RPC_URL }} --broadcast --verify
