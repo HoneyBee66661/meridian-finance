@@ -64,10 +64,12 @@ jobs:
         # Fails if any deterministic test's gas moves by more than 20 units vs
         # the committed .gas-snapshot. Fuzz/invariant rows are excluded
         # (--no-match-test) — forge 1.7.x μ rows are not byte-stable across
-        # invocations even with a pinned seed (Ch 13/14 finding): the gate
-        # covers deterministic rows only. --check prints the diff on failure
-        # (--diff is not combinable with --check in forge 1.7.x).
-        run: forge snapshot --check --tolerance 20 --no-match-test "\([^)]|invariant_"
+        # invocations even with a pinned seed (Ch 13/14 finding). Fork tests
+        # are excluded too (--no-match-path): they skip to gas 0 without RPC
+        # and their rows behave differently across forge versions; the fork
+        # layer runs in fork.yml without a snapshot gate. --check prints the
+        # diff on failure (--diff is not combinable with --check in forge 1.7.x).
+        run: forge snapshot --check --tolerance 20 --no-match-test "\([^)]|invariant_" --no-match-path "test/*Fork*"
 
       - name: Coverage
         run: forge coverage --report summary
