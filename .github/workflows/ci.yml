@@ -76,5 +76,10 @@ jobs:
         # and tightened once the protocol surface exists (Ch 14+).
         run: slither . --config-file slither.config.json
 
-      - name: Aderyn
-        uses: Cyfrin/aderyn-action@v1
+      - name: Install Aderyn
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/cyfrin/aderyn/releases/latest/download/aderyn-installer.sh | bash
+
+      - name: Aderyn (protocol surface)
+        # Lab/probe contracts are filtered via aderyn.toml (same philosophy as
+        # slither.config.json filter_paths); findings are triaged in the PR.
+        run: aderyn . --config aderyn.toml

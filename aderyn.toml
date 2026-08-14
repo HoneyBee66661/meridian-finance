@@ -1,0 +1,9 @@
+# Aderyn configuration — protocol-surface SAST gate (Ch 13).
+# Lab/probe contracts (*Probe, Mini*, EvmMiniature, *StorageLab) are teaching
+# material with DOCUMENTED deliberate findings (see docs/ci-cd-playbook.md,
+# StaticProbe lab section) — excluded here so the gate measures the protocol
+# surface only, mirroring slither.config.json's filter_paths.
+version = 1
+root = {}
+src = "src/"
+exclude = ["Probe", "Mini", "EvmMiniature", "StorageLab"]
