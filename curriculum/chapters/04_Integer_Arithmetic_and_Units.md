@@ -6,7 +6,7 @@ The EVM has no fractions and no floating point — only 256-bit integers. Every 
 
 1. [Learning Objectives](#learning-objectives)
 2. [Why Integers — The EVM Has No Fractions](#why-integers--the-evm-has-no-fractions)
-3. The Unit Ladder — wei, gwei, ether, decimals
+3. [The Unit Ladder — wei, gwei, ether, decimals](#the-unit-ladder--wei-gwei-ether-token-decimals)
 4. [Modular Arithmetic — uint256 is ℤ/2²⁵⁶ℤ](#modular-arithmetic--uint256-is-z2256z)
 5. [Division Truncates — Rounding is Policy](#division-truncates--rounding-is-policy)
 6. [Phantom Overflow & mulDiv](#phantom-overflow--muldiv)

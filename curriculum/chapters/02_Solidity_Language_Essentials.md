@@ -12,7 +12,7 @@ Solidity is not a runtime — it is a compiler front-end over the EVM you alread
 6. [Events — The Query Interface](#events--the-query-interface)
 7. [Errors — Three Ways to Fail](#errors--three-ways-to-fail)
 8. [Locked Conventions](#locked-conventions--meridian-style-canon)
-9. Version Rails & the Compiler as Auditor
+9. [Version Rails & the Compiler as Auditor](#version-rails--the-compiler-as-your-first-auditor)
 10. [Mathematical Foundations — Integer Boundaries](#mathematical-foundations--integer-boundaries--wrap-semantics)
 11. [Code Walkthrough — ErrorProbe.sol](#code-walkthrough--errorprobesol)
 12. [Production Reference — OZ v5 IERC20Errors](#production-reference--oz-v5-ierc20errors--reading-plan)

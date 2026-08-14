@@ -15,7 +15,7 @@ Every gas estimate you will ever write, every invariant you will ever prove, and
 9. [Security Analysis — Vulnerability Classes](#security-analysis--vulnerability-classes-from-evm-semantics)
 10. [Gas Optimization Patterns](#gas-optimization-patterns)
 11. [Common Mistakes](#common-mistakes)
-12. Exercises & Lab
+12. [Exercises & Lab](#exercises--weekly-lab)
 13. [Quiz](#quiz)
 14. [Further Reading](#further-reading)
 
