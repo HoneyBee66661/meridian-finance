@@ -6,6 +6,10 @@ curriculum (EVM → Solidity → storage/gas → testing → token standards →
 core → security → L2s → account abstraction → full-stack). Every chapter ships a
 lab that is materialized, compile-verified, and tested in this repository.
 
+> 📚 **Curriculum (theory track):** the finalized chapter text lives in
+> [`curriculum/`](curriculum/) — Module 1 (Ch 1–5) is published, chapters 6+
+> ship as they are finalized.
+
 > **Positioning (honest):** this is a *learning* codebase with production-grade
 > discipline — locked conventions, a full test suite (unit + fuzz + invariant),
 > fork-testing, CI, and documented security analysis. It is not deployed and has
