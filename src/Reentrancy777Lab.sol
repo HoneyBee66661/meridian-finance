@@ -74,7 +74,9 @@ contract HookToken is IERC20, ITokenSecurityLab {
 
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
         if (allowance[from][msg.sender] != type(uint256).max) {
-            if (allowance[from][msg.sender] < value) revert InsufficientBalance(allowance[from][msg.sender], value);
+            if (allowance[from][msg.sender] < value) {
+                revert InsufficientBalance(allowance[from][msg.sender], value);
+            }
             allowance[from][msg.sender] -= value;
         }
         _transfer(from, to, value);
@@ -93,8 +95,11 @@ contract HookToken is IERC20, ITokenSecurityLab {
 
     function _callTokensReceived(address from, address to, uint256 value) internal {
         if (to.code.length == 0) return; // EOA: no hook
-        (bool ok, bytes memory data) =
-            to.call(abi.encodeWithSelector(IERC777Recipient.tokensReceived.selector, msg.sender, from, to, value, "", ""));
+        (bool ok, bytes memory data) = to.call(
+            abi.encodeWithSelector(
+                IERC777Recipient.tokensReceived.selector, msg.sender, from, to, value, "", ""
+            )
+        );
         if (!ok) revert HookNotAccepted(to);
         if (data.length != 32 || abi.decode(data, (bytes32)) != MAGIC) revert HookNotAccepted(to);
     }
@@ -181,10 +186,14 @@ contract ReentrantAttacker is IERC777Recipient, ITokenSecurityLab {
     /// @notice The malicious hook. Runs in the attacker's context — the call
     ///         to `pool.claim()` below is made BY this contract, so `claim`
     ///         reads `rewards[attacker]`, not `rewards[HookToken]`.
-    function tokensReceived(address, address, address, uint256 amount, bytes calldata, bytes calldata)
-        external
-        returns (bytes32)
-    {
+    function tokensReceived(
+        address,
+        address,
+        address,
+        uint256 amount,
+        bytes calldata,
+        bytes calldata
+    ) external returns (bytes32) {
         drained += amount;
         // Guard: only re-enter while the pool can still pay. Without it the
         // innermost transfer would revert and roll back the entire drain.

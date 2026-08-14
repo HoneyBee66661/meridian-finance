@@ -28,7 +28,13 @@ interface IConstantProductPoolLab {
         address indexed to
     );
     event Mint(address indexed sender, uint256 amount0, uint256 amount1, uint256 liquidity);
-    event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to, uint256 liquidity);
+    event Burn(
+        address indexed sender,
+        uint256 amount0,
+        uint256 amount1,
+        address indexed to,
+        uint256 liquidity
+    );
     event Sync(uint256 reserve0, uint256 reserve1);
     event SwapFeeSet(uint256 fee);
 
@@ -45,14 +51,19 @@ interface IConstantProductPoolLab {
 
     /// @notice Amount of the OUT token received for `amountIn` of the IN token.
     /// @param zeroForOne true: in = token0, out = token1; false: the reverse.
-    function getAmountOut(uint256 amountIn, bool zeroForOne) external view returns (uint256 amountOut);
+    function getAmountOut(uint256 amountIn, bool zeroForOne)
+        external
+        view
+        returns (uint256 amountOut);
 
     /// @notice Add `amount0`/`amount1` and mint LP shares (Uniswap-v2 shape:
     ///         first mint = sqrt(x·y) − MINIMUM_LIQUIDITY, later = min ratio).
     function addLiquidity(uint256 amount0, uint256 amount1) external returns (uint256 liquidity);
 
     /// @notice Burn `liquidity` shares and withdraw a pro-rata slice of reserves.
-    function removeLiquidity(uint256 liquidity, address to) external returns (uint256 amount0, uint256 amount1);
+    function removeLiquidity(uint256 liquidity, address to)
+        external
+        returns (uint256 amount0, uint256 amount1);
 
     /// @notice Swap `amountIn` of one token for the other; `amountOutMin` is the
     ///         trader's slippage guard. Reverts `SlippageExceeded` if exceeded.

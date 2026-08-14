@@ -16,13 +16,13 @@ contract StorageProbe {
     uint64 public d;
 
     // Declaration order decides packing: these can NOT share slots with a-d.
-    uint256 public big;          // slot 1
-    address public owner;        // slot 2 (20 bytes, owns slot 2 alone)
-    uint96  public feeBps;       // shares slot 2 with `owner` (20+12 = 32B)
+    uint256 public big; // slot 1
+    address public owner; // slot 2 (20 bytes, owns slot 2 alone)
+    uint96 public feeBps; // shares slot 2 with `owner` (20+12 = 32B)
 
-    uint256[] public values;     // slot 3: length; elements at keccak256(3) + i
-    mapping(address => uint256) public debt;   // slot 4
-    string public tag;           // slot 5: short-string inline or keccak(5)
+    uint256[] public values; // slot 3: length; elements at keccak256(3) + i
+    mapping(address => uint256) public debt; // slot 4
+    string public tag; // slot 5: short-string inline or keccak(5)
 
     /// @notice Raw slot read — the audit primitive.
     /// @param slot The storage slot to read.
@@ -60,7 +60,7 @@ contract StorageProbe {
     /// @return True if `tag` uses the short (inline) form.
     function tagIsShort() external view returns (bool) {
         bytes32 s = readSlot(bytes32(uint256(5)));
-        return uint8(uint256(s)) % 2 == 0;   // even low bit ⇒ short form
+        return uint8(uint256(s)) % 2 == 0; // even low bit ⇒ short form
     }
 
     /// @dev Test helpers (external, verbs-first, past-tense events not needed).
@@ -82,10 +82,14 @@ contract StorageProbe {
 
     /// @dev Layout-pin helpers: write the packed groups for slot assertions.
     function setAll(uint64 _a, uint64 _b, uint64 _c, uint64 _d) external {
-        a = _a; b = _b; c = _c; d = _d;
+        a = _a;
+        b = _b;
+        c = _c;
+        d = _d;
     }
 
     function setOwnerAndFee(address _owner, uint96 _feeBps) external {
-        owner = _owner; feeBps = _feeBps;
+        owner = _owner;
+        feeBps = _feeBps;
     }
 }

@@ -9,25 +9,41 @@ contract GasProbe {
     uint256 public probe; // hot scalar slot for SSTORE state-machine probes
 
     /// @notice Write a mapping slot. First touch in a tx = cold (22,100 or 5,000).
-    function setSlot(uint256 k, uint256 v) external { slots[k] = v; }
+    function setSlot(uint256 k, uint256 v) external {
+        slots[k] = v;
+    }
 
     /// @notice Read a mapping slot. First touch in a tx = cold (2,100), then warm (100).
-    function getSlot(uint256 k) external view returns (uint256) { return slots[k]; }
+    function getSlot(uint256 k) external view returns (uint256) {
+        return slots[k];
+    }
 
     /// @notice SSTORE set: 0 -> nonzero. Warm cost 20,000.
-    function sstoreSet() external { probe = 1; }
+    function sstoreSet() external {
+        probe = 1;
+    }
 
     /// @notice SSTORE reset: nonzero -> nonzero. Warm cost 2,900.
-    function sstoreReset() external { probe = 2; }
+    function sstoreReset() external {
+        probe = 2;
+    }
 
     /// @notice SSTORE clear: nonzero -> 0. Warm cost 2,900; refund 4,800 capped at gas_used/5.
-    function sstoreClear() external { probe = 0; }
+    function sstoreClear() external {
+        probe = 0;
+    }
 
     /// @notice Dirty restore: set, then restore original in one tx (refund 2,800, capped).
-    function sstoreDirtyRestore() external { probe = 2; probe = 1; }
+    function sstoreDirtyRestore() external {
+        probe = 2;
+        probe = 1;
+    }
 
     /// @notice Clear then re-set in one tx — the re-clear refund rule (4,800, capped).
-    function sstoreClearThenSet() external { probe = 0; probe = 1; }
+    function sstoreClearThenSet() external {
+        probe = 0;
+        probe = 1;
+    }
 
     /// @notice Touch the same slot twice — second read is warm (100 vs 2,100).
     function touchTwice(uint256 k) external view returns (uint256 a, uint256 b) {

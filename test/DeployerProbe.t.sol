@@ -30,25 +30,29 @@ contract DeployerProbeTest is Test {
         assertEq(b1, p2, "deploy must match prediction");
         assertTrue(a1 != b1, "different salts must differ");
         // determinism: the prediction repeats for the same (deployer, salt)
-        address predictedAgain = probe.predictCreate2(
-            address(probe), saltA, type(Counter).creationCode
-        );
+        address predictedAgain =
+            probe.predictCreate2(address(probe), saltA, type(Counter).creationCode);
         assertEq(p1, predictedAgain, "prediction must be deterministic");
     }
 
     /// @dev The initcode hash in the formula is creationCode, not runtimeCode.
     function testPredictUsesInitcodeHash() public view {
-        address predicted = probe.predictCreate2(
-            address(probe),
-            bytes32(0),
-            type(DeployerProbe).creationCode
+        address predicted =
+            probe.predictCreate2(address(probe), bytes32(0), type(DeployerProbe).creationCode);
+        address expected = address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            bytes1(0xff),
+                            address(probe),
+                            bytes32(0),
+                            keccak256(type(DeployerProbe).creationCode)
+                        )
+                    )
+                )
+            )
         );
-        address expected = address(uint160(uint256(keccak256(abi.encodePacked(
-            bytes1(0xff),
-            address(probe),
-            bytes32(0),
-            keccak256(type(DeployerProbe).creationCode)
-        )))));
         assertEq(predicted, expected, "EIP-1014 formula mismatch");
     }
 

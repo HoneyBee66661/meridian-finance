@@ -38,11 +38,13 @@ contract MeridianTokenTest is Test {
     /// @dev ERC-2612 typehash (compile-time constant; the contract keeps it
     ///      private, so the test re-derives it — a signature that disagrees
     ///      here would be rejected by `permit`).
-    bytes32 internal constant PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 internal constant PERMIT_TYPEHASH = keccak256(
+        "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+    );
     /// @dev EIP-712 domain typehash.
-    bytes32 internal constant DOMAIN_TYPEHASH =
-        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 internal constant DOMAIN_TYPEHASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
 
     MeridianToken internal token;
     address internal owner; // DEFAULT_ADMIN_ROLE holder
@@ -104,14 +106,21 @@ contract MeridianTokenTest is Test {
     }
 
     function test_transfer_toZero_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0))
+        );
         vm.prank(alice);
         token.transfer(address(0), 1);
     }
 
     function test_transfer_insufficientBalance_reverts() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, alice, ALICE_FUNDING, ALICE_FUNDING + 1)
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector,
+                alice,
+                ALICE_FUNDING,
+                ALICE_FUNDING + 1
+            )
         );
         vm.prank(alice);
         token.transfer(bob, ALICE_FUNDING + 1);
@@ -147,7 +156,9 @@ contract MeridianTokenTest is Test {
     }
 
     function test_approve_zeroSpender_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidSpender.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InvalidSpender.selector, address(0))
+        );
         vm.prank(alice);
         token.approve(address(0), 100);
     }
@@ -174,7 +185,9 @@ contract MeridianTokenTest is Test {
     function test_transferFrom_insufficientAllowance_reverts() public {
         vm.prank(alice);
         token.approve(bob, 100);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 100, 101));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 100, 101)
+        );
         vm.prank(bob);
         token.transferFrom(alice, bob, 101);
     }
@@ -183,7 +196,12 @@ contract MeridianTokenTest is Test {
         vm.prank(alice);
         token.approve(bob, type(uint256).max); // allowance is not the binding constraint
         vm.expectRevert(
-            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, alice, ALICE_FUNDING, ALICE_FUNDING + 1)
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector,
+                alice,
+                ALICE_FUNDING,
+                ALICE_FUNDING + 1
+            )
         );
         vm.prank(bob);
         token.transferFrom(alice, bob, ALICE_FUNDING + 1);
@@ -295,22 +313,31 @@ contract MeridianTokenTest is Test {
 
         bytes32 replayedDigest = _permitDigest(alice, bob, 100, 1, deadline);
         address recoveredForReplay = ecrecover(replayedDigest, v, r, s);
-        vm.expectRevert(abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, recoveredForReplay, alice));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC20Permit.ERC2612InvalidSigner.selector, recoveredForReplay, alice
+            )
+        );
         token.permit(alice, bob, 100, deadline, v, r, s);
     }
 
     function test_permit_expired_reverts() public {
         uint256 deadline = block.timestamp - 1; // already past
-        vm.expectRevert(abi.encodeWithSelector(ERC20Permit.ERC2612ExpiredSignature.selector, deadline));
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20Permit.ERC2612ExpiredSignature.selector, deadline)
+        );
         token.permit(alice, bob, 100, deadline, 27, bytes32(0), bytes32(0)); // reverts before sig check
     }
 
     function test_permit_wrongSigner_reverts() public {
         uint256 deadline = block.timestamp + 1 hours;
         // Carol signs Alice's permit — the recovered signer is Carol, not Alice.
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(CAROL_KEY, _permitDigest(alice, bob, 100, 0, deadline));
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(CAROL_KEY, _permitDigest(alice, bob, 100, 0, deadline));
 
-        vm.expectRevert(abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, carol, alice));
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, carol, alice)
+        );
         token.permit(alice, bob, 100, deadline, v, r, s);
     }
 
@@ -329,22 +356,27 @@ contract MeridianTokenTest is Test {
             )
         );
         bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, alice, bob, 100, 0, deadline));
-        bytes32 otherChainDigest = keccak256(abi.encodePacked("\x19\x01", otherChainDomain, structHash));
+        bytes32 otherChainDigest =
+            keccak256(abi.encodePacked("\x19\x01", otherChainDomain, structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ALICE_KEY, otherChainDigest);
 
         // The contract rebuilds the digest over the REAL domain (chainId of
         // this chain); the recovered signer is whoever that digest yields.
-        bytes32 realDigest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+        bytes32 realDigest =
+            keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
         address recoveredOverRealDomain = ecrecover(realDigest, v, r, s);
         vm.expectRevert(
-            abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, recoveredOverRealDomain, alice)
+            abi.encodeWithSelector(
+                ERC20Permit.ERC2612InvalidSigner.selector, recoveredOverRealDomain, alice
+            )
         );
         token.permit(alice, bob, 100, deadline, v, r, s);
     }
 
     function test_permit_maxDeadline_noExpiry() public {
         // type(uint256).max as deadline is the "no expiry" convention.
-        (uint8 v, bytes32 r, bytes32 s) = _sign(_permitDigest(alice, bob, 100, 0, type(uint256).max));
+        (uint8 v, bytes32 r, bytes32 s) =
+            _sign(_permitDigest(alice, bob, 100, 0, type(uint256).max));
         token.permit(alice, bob, 100, type(uint256).max, v, r, s);
         assertEq(token.allowance(alice, bob), 100);
     }
@@ -389,14 +421,18 @@ contract MeridianTokenTest is Test {
 
     function test_mint_nonMinter_reverts() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, token.MINTER_ROLE())
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, token.MINTER_ROLE()
+            )
         );
         vm.prank(alice);
         token.mint(alice, 1);
     }
 
     function test_mint_toZero_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0))
+        );
         vm.prank(minter);
         token.mint(address(0), 1);
     }
@@ -423,7 +459,9 @@ contract MeridianTokenTest is Test {
     function test_burnFrom_insufficientAllowance_reverts() public {
         vm.prank(alice);
         token.approve(bob, 100);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 100, 101));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 100, 101)
+        );
         vm.prank(bob);
         token.burnFrom(alice, 101);
     }
@@ -452,18 +490,26 @@ contract MeridianTokenTest is Test {
         bytes32 minterRole = token.MINTER_ROLE();
         bytes32 defaultAdminRole = token.DEFAULT_ADMIN_ROLE();
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, defaultAdminRole)
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, alice, defaultAdminRole
+            )
         );
         vm.prank(alice);
         token.grantRole(minterRole, bob);
     }
 
     function test_constructor_zeroAddress_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianToken.InvalidConstructorAddress.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianToken.InvalidConstructorAddress.selector, address(0))
+        );
         new MeridianToken(address(0), minter, treasury, INITIAL_SUPPLY);
-        vm.expectRevert(abi.encodeWithSelector(IMeridianToken.InvalidConstructorAddress.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianToken.InvalidConstructorAddress.selector, address(0))
+        );
         new MeridianToken(owner, address(0), treasury, INITIAL_SUPPLY);
-        vm.expectRevert(abi.encodeWithSelector(IMeridianToken.InvalidConstructorAddress.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianToken.InvalidConstructorAddress.selector, address(0))
+        );
         new MeridianToken(owner, minter, address(0), INITIAL_SUPPLY);
     }
 
@@ -573,12 +619,16 @@ contract MeridianTokenTest is Test {
     // ── helpers ───────────────────────────────────────────────────────────────
 
     /// @dev EIP-712 digest for a Permit struct: 0x19 0x01 ‖ domain ‖ structHash.
-    function _permitDigest(address owner_, address spender_, uint256 value_, uint256 nonce_, uint256 deadline_)
-        internal
-        view
-        returns (bytes32)
-    {
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner_, spender_, value_, nonce_, deadline_));
+    function _permitDigest(
+        address owner_,
+        address spender_,
+        uint256 value_,
+        uint256 nonce_,
+        uint256 deadline_
+    ) internal view returns (bytes32) {
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner_, spender_, value_, nonce_, deadline_)
+        );
         return keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
     }
 

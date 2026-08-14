@@ -101,15 +101,21 @@ contract MeridianVault is IMeridianVault, AccessControl {
         uint64 reserveFactorBps_
     ) {
         if (collateralToken_ == address(0) || debtToken_ == address(0)) {
-            revert InvalidConstructorAddress(collateralToken_ == address(0) ? collateralToken_ : debtToken_);
+            revert InvalidConstructorAddress(collateralToken_ == address(0)
+                    ? collateralToken_
+                    : debtToken_);
         }
         if (address(oracle_) == address(0)) revert InvalidConstructorAddress(address(oracle_));
         if (address(interestRateModel_) == address(0)) {
             revert InvalidConstructorAddress(address(interestRateModel_));
         }
         if (collateralFactorBps_ > BPS) revert InvalidCollateralFactor(collateralFactorBps_);
-        if (liquidationThreshold_ <= WAD) revert InvalidLiquidationThreshold(liquidationThreshold_);
-        if (liquidationIncentiveBps_ == 0) revert InvalidLiquidationIncentive(liquidationIncentiveBps_);
+        if (liquidationThreshold_ <= WAD) {
+            revert InvalidLiquidationThreshold(liquidationThreshold_);
+        }
+        if (liquidationIncentiveBps_ == 0) {
+            revert InvalidLiquidationIncentive(liquidationIncentiveBps_);
+        }
         if (reserveFactorBps_ > BPS) revert InvalidReserveFactor(reserveFactorBps_);
 
         collateralToken = collateralToken_;
@@ -197,8 +203,9 @@ contract MeridianVault is IMeridianVault, AccessControl {
 
     /// @inheritdoc IMeridianVault
     function borrowCapacity(address user) public view override returns (uint256) {
-        uint256 collValue =
-            _collateralOf[user].mulDiv(_oracle.getPrice(collateralToken), 10 ** _collateralDecimals);
+        uint256 collValue = _collateralOf[user].mulDiv(
+            _oracle.getPrice(collateralToken), 10 ** _collateralDecimals
+        );
         uint256 capacityBase = collValue.mulDiv(_collateralFactorBps, BPS);
         return capacityBase.mulDiv(10 ** _debtDecimals, _oracle.getPrice(debtToken));
     }
@@ -307,7 +314,11 @@ contract MeridianVault is IMeridianVault, AccessControl {
     }
 
     /// @inheritdoc IMeridianVault
-    function withdrawExcessLiquidity(uint256 amount) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function withdrawExcessLiquidity(uint256 amount)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         if (amount == 0) revert ZeroAmount();
         uint256 idle = _idleCash();
         if (amount > idle) revert ExcessiveWithdrawal(amount, idle);
@@ -316,35 +327,61 @@ contract MeridianVault is IMeridianVault, AccessControl {
     }
 
     /// @inheritdoc IMeridianVault
-    function setCollateralFactor(uint64 collateralFactorBps_) external override onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (collateralFactorBps_ > BPS) revert InvalidCollateralFactor(collateralFactorBps_);
+    function setCollateralFactor(uint64 collateralFactorBps_)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (collateralFactorBps_ > BPS) {
+            revert InvalidCollateralFactor(collateralFactorBps_);
+        }
         emit CollateralFactorSet(_collateralFactorBps, collateralFactorBps_);
         _collateralFactorBps = collateralFactorBps_;
     }
 
     /// @inheritdoc IMeridianVault
-    function setLiquidationThreshold(uint256 liquidationThreshold_) external override onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (liquidationThreshold_ <= WAD) revert InvalidLiquidationThreshold(liquidationThreshold_);
+    function setLiquidationThreshold(uint256 liquidationThreshold_)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (liquidationThreshold_ <= WAD) {
+            revert InvalidLiquidationThreshold(liquidationThreshold_);
+        }
         emit LiquidationThresholdSet(_liquidationThreshold, liquidationThreshold_);
         _liquidationThreshold = liquidationThreshold_;
     }
 
     /// @inheritdoc IMeridianVault
-    function setLiquidationIncentive(uint64 liquidationIncentiveBps_) external override onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (liquidationIncentiveBps_ == 0) revert InvalidLiquidationIncentive(liquidationIncentiveBps_);
+    function setLiquidationIncentive(uint64 liquidationIncentiveBps_)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (liquidationIncentiveBps_ == 0) {
+            revert InvalidLiquidationIncentive(liquidationIncentiveBps_);
+        }
         emit LiquidationIncentiveSet(_liquidationIncentiveBps, liquidationIncentiveBps_);
         _liquidationIncentiveBps = liquidationIncentiveBps_;
     }
 
     /// @inheritdoc IMeridianVault
-    function setReserveFactor(uint64 reserveFactorBps_) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setReserveFactor(uint64 reserveFactorBps_)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         if (reserveFactorBps_ > BPS) revert InvalidReserveFactor(reserveFactorBps_);
         emit ReserveFactorSet(_reserveFactorBps, reserveFactorBps_);
         _reserveFactorBps = reserveFactorBps_;
     }
 
     /// @inheritdoc IMeridianVault
-    function setInterestRateModel(IInterestRateModel newModel) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setInterestRateModel(IInterestRateModel newModel)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         _accrueInterest(); // lock pending interest at the old model
         if (address(newModel) == address(0)) revert InvalidConstructorAddress(address(newModel));
         emit InterestRateModelSet(_interestRateModel, newModel);
@@ -370,7 +407,11 @@ contract MeridianVault is IMeridianVault, AccessControl {
 
     /// @dev Health factor for explicit collateral, WAD, floored (conservative).
     ///      `debtValue == 0` is handled by the caller (HF = max).
-    function _healthFactor(uint256 collateralAmount, uint256 debtAmount) internal view returns (uint256) {
+    function _healthFactor(uint256 collateralAmount, uint256 debtAmount)
+        internal
+        view
+        returns (uint256)
+    {
         if (debtAmount == 0) return type(uint256).max;
         if (collateralAmount == 0) return 0;
         uint256 collValue =

@@ -35,8 +35,9 @@ contract MeridianGovernanceTokenTest is Test {
     uint256 internal constant INITIAL_SUPPLY = 10_000_000e18;
     uint256 internal constant ALICE_FUNDING = 1_000_000e18;
 
-    bytes32 internal constant PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 internal constant PERMIT_TYPEHASH = keccak256(
+        "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+    );
     bytes32 internal constant DELEGATION_TYPEHASH =
         keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
@@ -95,27 +96,34 @@ contract MeridianGovernanceTokenTest is Test {
         uint256 deadline,
         uint256 nonce
     ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, signer, spender, value, nonce, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", gmer.DOMAIN_SEPARATOR(), structHash));
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, signer, spender, value, nonce, deadline)
+        );
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", gmer.DOMAIN_SEPARATOR(), structHash));
         return vm.sign(key, digest);
     }
 
     /// @dev EIP-712 signature over a Delegation struct.
-    function _signDelegation(
-        uint256 key,
-        address delegatee,
-        uint256 nonce,
-        uint256 expiry
-    ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+    function _signDelegation(uint256 key, address delegatee, uint256 nonce, uint256 expiry)
+        internal
+        view
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
         bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", gmer.DOMAIN_SEPARATOR(), structHash));
+        bytes32 digest =
+            keccak256(abi.encodePacked("\x19\x01", gmer.DOMAIN_SEPARATOR(), structHash));
         return vm.sign(key, digest);
     }
 
     // ── construction & clock ──────────────────────────────────────────────────
 
     function test_constructor_zeroAddress_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianGovernanceToken.InvalidConstructorAddress.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IMeridianGovernanceToken.InvalidConstructorAddress.selector, address(0)
+            )
+        );
         new MeridianGovernanceToken(address(0), "Meridian Governance", "gMER");
     }
 
@@ -159,7 +167,9 @@ contract MeridianGovernanceTokenTest is Test {
     }
 
     function test_depositFor_zeroAddress_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0))
+        );
         vm.prank(alice);
         gmer.depositFor(address(0), 100e18);
         // Atomicity: the pull is rolled back with the mint.
@@ -170,7 +180,9 @@ contract MeridianGovernanceTokenTest is Test {
     function test_depositFor_withoutAllowance_reverts() public {
         vm.prank(bob); // bob never approved the wrapper
         vm.expectRevert(
-            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, address(gmer), 0, 100e18)
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientAllowance.selector, address(gmer), 0, 100e18
+            )
         );
         gmer.deposit(100e18);
     }
@@ -307,7 +319,9 @@ contract MeridianGovernanceTokenTest is Test {
     function test_getPastVotes_future_reverts() public {
         _depositFor(alice, 1_000e18);
         vm.expectRevert(
-            abi.encodeWithSelector(Votes.ERC5805FutureLookup.selector, block.number + 100, uint48(block.number))
+            abi.encodeWithSelector(
+                Votes.ERC5805FutureLookup.selector, block.number + 100, uint48(block.number)
+            )
         );
         gmer.getPastVotes(alice, block.number + 100);
     }
@@ -317,7 +331,9 @@ contract MeridianGovernanceTokenTest is Test {
         // timepoint >= clock() reverts — the CURRENT block is not queryable.
         _depositFor(alice, 1_000e18);
         vm.expectRevert(
-            abi.encodeWithSelector(Votes.ERC5805FutureLookup.selector, block.number, uint48(block.number))
+            abi.encodeWithSelector(
+                Votes.ERC5805FutureLookup.selector, block.number, uint48(block.number)
+            )
         );
         gmer.getPastVotes(alice, block.number);
     }
@@ -348,7 +364,8 @@ contract MeridianGovernanceTokenTest is Test {
     function test_delegateBySig_delegatesSigner() public {
         // The signature delegates the SIGNER, whoever submits it.
         _depositFor(alice, 1_000e18);
-        (uint8 v, bytes32 r, bytes32 s) = _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
 
         vm.prank(carol); // third-party submission
         gmer.delegateBySig(bob, 0, block.timestamp + 1 days, v, r, s);
@@ -361,7 +378,8 @@ contract MeridianGovernanceTokenTest is Test {
 
     function test_delegateBySig_replay_reverts() public {
         _depositFor(alice, 1_000e18);
-        (uint8 v, bytes32 r, bytes32 s) = _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
 
         gmer.delegateBySig(bob, 0, block.timestamp + 1 days, v, r, s);
         vm.expectRevert(abi.encodeWithSelector(Nonces.InvalidAccountNonce.selector, alice, 1));
@@ -369,15 +387,19 @@ contract MeridianGovernanceTokenTest is Test {
     }
 
     function test_delegateBySig_expired_reverts() public {
-        (uint8 v, bytes32 r, bytes32 s) = _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
         vm.warp(block.timestamp + 2 days);
 
-        vm.expectRevert(abi.encodeWithSelector(IVotes.VotesExpiredSignature.selector, block.timestamp - 1 days));
+        vm.expectRevert(
+            abi.encodeWithSelector(IVotes.VotesExpiredSignature.selector, block.timestamp - 1 days)
+        );
         gmer.delegateBySig(bob, 0, block.timestamp - 1 days, v, r, s);
     }
 
     function test_delegateBySig_tamperedSignature_reverts() public {
-        (uint8 v, bytes32 r, bytes32 s) = _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
         vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignature.selector));
         // s = 0 is not low-s-valid and ecrecover yields address(0) → the OZ
         // ECDSA library deterministically reverts ECDSAInvalidSignature.
@@ -390,8 +412,10 @@ contract MeridianGovernanceTokenTest is Test {
         // ERC20Permit and Votes each inherit Nonces + EIP712; in one contract
         // they are the SAME instance (C3 merges the bases). So permit and
         // delegateBySig consume one shared per-owner nonce counter.
-        (uint8 v1, bytes32 r1, bytes32 s1) = _signPermit(ALICE_KEY, alice, bob, 100e18, block.timestamp + 1 days, 0);
-        (uint8 v2, bytes32 r2, bytes32 s2) = _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
+        (uint8 v1, bytes32 r1, bytes32 s1) =
+            _signPermit(ALICE_KEY, alice, bob, 100e18, block.timestamp + 1 days, 0);
+        (uint8 v2, bytes32 r2, bytes32 s2) =
+            _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
 
         // permit consumes nonce 0...
         gmer.permit(alice, bob, 100e18, block.timestamp + 1 days, v1, r1, s1);
@@ -408,8 +432,10 @@ contract MeridianGovernanceTokenTest is Test {
     }
 
     function test_delegationAndPermit_shareNonceSpace_reverse() public {
-        (uint8 v1, bytes32 r1, bytes32 s1) = _signPermit(ALICE_KEY, alice, bob, 100e18, block.timestamp + 1 days, 0);
-        (uint8 v2, bytes32 r2, bytes32 s2) = _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
+        (uint8 v1, bytes32 r1, bytes32 s1) =
+            _signPermit(ALICE_KEY, alice, bob, 100e18, block.timestamp + 1 days, 0);
+        (uint8 v2, bytes32 r2, bytes32 s2) =
+            _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
 
         // Same collision in the other order — but the failure mode is DIFFERENT
         // (pinned in-run against OZ v5.7 ERC20Permit): permit hashes
@@ -428,11 +454,15 @@ contract MeridianGovernanceTokenTest is Test {
             abi.encodePacked(
                 "\x19\x01",
                 gmer.DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(PERMIT_TYPEHASH, alice, bob, 100e18, 1, block.timestamp + 1 days))
+                keccak256(
+                    abi.encode(PERMIT_TYPEHASH, alice, bob, 100e18, 1, block.timestamp + 1 days)
+                )
             )
         );
         address recovered = ECDSA.recover(staleDigest, v1, r1, s1);
-        vm.expectRevert(abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, recovered, alice));
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, recovered, alice)
+        );
         gmer.permit(alice, bob, 100e18, block.timestamp + 1 days, v1, r1, s1);
         assertEq(gmer.nonces(alice), 1); // atomic revert: nothing burned
     }
@@ -611,7 +641,8 @@ contract MeridianGovernanceTokenTest is Test {
 
     function test_gas_delegateBySig() public {
         _depositFor(alice, 1_000e18);
-        (uint8 v, bytes32 r, bytes32 s) = _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signDelegation(ALICE_KEY, bob, 0, block.timestamp + 1 days);
         gmer.delegateBySig(bob, 0, block.timestamp + 1 days, v, r, s); // warm-up
 
         uint256 nonce = 1;

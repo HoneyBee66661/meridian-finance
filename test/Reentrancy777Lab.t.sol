@@ -4,7 +4,14 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {ITokenSecurityLab} from "../src/ITokenSecurityLab.sol";
-import {HookToken, ReentrantRewardPool, FixedRewardPool, ReentrantAttacker, PassiveHookRecipient, WrongMagicRecipient} from "../src/Reentrancy777Lab.sol";
+import {
+    HookToken,
+    ReentrantRewardPool,
+    FixedRewardPool,
+    ReentrantAttacker,
+    PassiveHookRecipient,
+    WrongMagicRecipient
+} from "../src/Reentrancy777Lab.sol";
 
 /// @notice Ch 17 EIP-777-style callback reentrancy demo (SIMPLIFIED, labeled).
 ///         A hook token whose transfers fire `tokensReceived` on the recipient
@@ -57,7 +64,9 @@ contract Reentrancy777LabTest is Test {
     ///      returns the wrong magic value rejects every transfer to it.
     function test_hookToken_revertsOnWrongMagic() public {
         token.mint(alice, 100);
-        vm.expectRevert(abi.encodeWithSelector(ITokenSecurityLab.HookNotAccepted.selector, address(wrong)));
+        vm.expectRevert(
+            abi.encodeWithSelector(ITokenSecurityLab.HookNotAccepted.selector, address(wrong))
+        );
         vm.prank(alice);
         token.transfer(address(wrong), 10);
     }
@@ -90,7 +99,11 @@ contract Reentrancy777LabTest is Test {
         // The CEI fix means the re-entrant claim sees a zeroed balance and
         // reverts; the revert propagates out of the hook, so the whole attack
         // call reverts and the pool keeps its 5.
-        vm.expectRevert(abi.encodeWithSelector(ITokenSecurityLab.HookNotAccepted.selector, address(fixedAttacker)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITokenSecurityLab.HookNotAccepted.selector, address(fixedAttacker)
+            )
+        );
         fixedAttacker.attack();
 
         assertEq(fixedAttacker.drained(), 0);

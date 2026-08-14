@@ -60,7 +60,7 @@ contract AbiProbe is IAbiProbe {
 
     /// @dev Internal word reader shared by `headWord` and `headOffset`.
     function _headWord(bytes calldata data, uint256 idx) private pure returns (uint256) {
-        bytes calldata slice = data[idx * 32: idx * 32 + 32];
+        bytes calldata slice = data[idx * 32:idx * 32 + 32];
         return uint256(bytes32(slice));
     }
 
@@ -90,11 +90,15 @@ contract AbiProbe is IAbiProbe {
 
     /// @inheritdoc IAbiProbe
     function sumCalldata(uint256[] calldata arr) external pure returns (uint256 acc) {
-        for (uint256 i; i < arr.length; ++i) acc += arr[i];
+        for (uint256 i; i < arr.length; ++i) {
+            acc += arr[i];
+        }
     }
 
     /// @inheritdoc IAbiProbe
     function sumCopied(uint256[] memory arr) external pure returns (uint256 acc) {
-        for (uint256 i; i < arr.length; ++i) acc += arr[i];
+        for (uint256 i; i < arr.length; ++i) {
+            acc += arr[i];
+        }
     }
 }

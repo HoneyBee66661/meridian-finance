@@ -40,7 +40,7 @@ library TickMathLab {
             if (absTick > uint256(int256(MAX_TICK))) revert InvalidTick(tick);
 
             uint256 ratio = absTick & 0x1 != 0
-                ? 0xfffcb933bd6fad37aa2d162d1a594001 // 1.0001^1
+                ? 0xfffcb933bd6fad37aa2d162d1a594001  // 1.0001^1
                 : 0x100000000000000000000000000000000; // 1.0
             if (absTick & 0x2 != 0) ratio = (ratio * 0xfff97272373d413259a46990580e213a) >> 128;
             if (absTick & 0x4 != 0) ratio = (ratio * 0xfff2e50f5f656932ef12357cf3c7fdcc) >> 128;
@@ -215,7 +215,9 @@ library TickMathLab {
             int24 tickLow = int24((logSqrt10001 - 3402992956809132418596140100660247210) >> 128);
             int24 tickHi = int24((logSqrt10001 + 291339464771989622907027621153398088495) >> 128);
 
-            tick = tickLow == tickHi ? tickLow : getSqrtRatioAtTick(tickHi) <= sqrtPriceX96 ? tickHi : tickLow;
+            tick = tickLow == tickHi
+                ? tickLow
+                : getSqrtRatioAtTick(tickHi) <= sqrtPriceX96 ? tickHi : tickLow;
         }
     }
 }

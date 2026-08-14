@@ -122,7 +122,10 @@ abstract contract Abstract4626Lab is IVault4626Lab {
     /// @notice Give `receiver` exactly `assets` and burn the required shares (ceil).
     /// @dev Owner-only in the lab (no share-allowance split; EIP-4626's full
     ///      caller/owner allowance is production plumbing, not conversion math).
-    function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner)
+        external
+        returns (uint256 shares)
+    {
         uint256 max = maxWithdraw(owner);
         if (assets > max) revert ExceededMaxWithdraw(owner, assets, max);
         shares = previewWithdraw(assets);
@@ -132,7 +135,10 @@ abstract contract Abstract4626Lab is IVault4626Lab {
     }
 
     /// @notice Burn `shares` and pay `receiver` the assets (floor).
-    function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner)
+        external
+        returns (uint256 assets)
+    {
         uint256 bal = _balanceOf[owner];
         if (bal < shares) revert InsufficientShares(bal, shares);
         assets = previewRedeem(shares);
@@ -171,8 +177,16 @@ abstract contract Abstract4626Lab is IVault4626Lab {
         _asset.safeTransfer(to, assets);
     }
 
-    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view virtual returns (uint256);
-    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view virtual returns (uint256);
+    function _convertToShares(uint256 assets, Math.Rounding rounding)
+        internal
+        view
+        virtual
+        returns (uint256);
+    function _convertToAssets(uint256 shares, Math.Rounding rounding)
+        internal
+        view
+        virtual
+        returns (uint256);
 }
 
 /// @notice The vulnerable vault: raw floor/floor, NO virtual offset.
@@ -183,7 +197,12 @@ contract Naive4626Lab is Abstract4626Lab {
 
     constructor(IERC20 asset_) Abstract4626Lab(asset_) {}
 
-    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
+    function _convertToShares(uint256 assets, Math.Rounding rounding)
+        internal
+        view
+        override
+        returns (uint256)
+    {
         uint256 supply = _totalSupply;
         if (supply == 0) return assets; // genesis: 1:1
         uint256 tracked = totalAssets();
@@ -191,7 +210,12 @@ contract Naive4626Lab is Abstract4626Lab {
         return assets.mulDiv(supply, tracked, rounding);
     }
 
-    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
+    function _convertToAssets(uint256 shares, Math.Rounding rounding)
+        internal
+        view
+        override
+        returns (uint256)
+    {
         uint256 supply = _totalSupply;
         if (supply == 0) return shares; // genesis: 1:1
         return shares.mulDiv(totalAssets(), supply, rounding);
@@ -207,11 +231,21 @@ contract Virtual4626Lab is Abstract4626Lab {
 
     constructor(IERC20 asset_) Abstract4626Lab(asset_) {}
 
-    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
+    function _convertToShares(uint256 assets, Math.Rounding rounding)
+        internal
+        view
+        override
+        returns (uint256)
+    {
         return assets.mulDiv(_totalSupply + 1, totalAssets() + 1, rounding);
     }
 
-    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
+    function _convertToAssets(uint256 shares, Math.Rounding rounding)
+        internal
+        view
+        override
+        returns (uint256)
+    {
         return shares.mulDiv(totalAssets() + 1, _totalSupply + 1, rounding);
     }
 }

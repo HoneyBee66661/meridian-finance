@@ -140,7 +140,9 @@ contract ArithProbeTest is Test {
 
     function test_mulDiv_knownVectors_slowPath() public {
         // (2^256-1)·(2^256-1)/ (2^256-1) = 2^256-1 — exercises the 512-bit path.
-        assertEq(probe.mulDiv(type(uint256).max, type(uint256).max, type(uint256).max), type(uint256).max);
+        assertEq(
+            probe.mulDiv(type(uint256).max, type(uint256).max, type(uint256).max), type(uint256).max
+        );
         assertEq(probe.mulDiv(type(uint256).max, 1, type(uint256).max), 1);
         // 2^128·2^128/2^128 = 2^128 — 512-bit product, exact slow-path result.
         assertEq(probe.mulDiv(2 ** 128, 2 ** 128, 2 ** 128), 2 ** 128);
@@ -268,7 +270,9 @@ contract ArithProbeTest is Test {
 
     function test_gas_checkedVsUnchecked() public {
         uint256[] memory xs = new uint256[](64);
-        for (uint256 i; i < 64; ++i) xs[i] = 1;
+        for (uint256 i; i < 64; ++i) {
+            xs[i] = 1;
+        }
         probe.checkedSum(xs); // warm-up (cold code load)
         probe.uncheckedSum(xs);
         uint256 checked = _measureChecked(xs);
@@ -317,7 +321,9 @@ contract ArithProbeTest is Test {
         best = type(uint256).max;
         for (uint256 run; run < 3; ++run) {
             uint256 start = gasleft();
-            for (uint256 i; i < 20; ++i) probe.checkedSum(xs);
+            for (uint256 i; i < 20; ++i) {
+                probe.checkedSum(xs);
+            }
             uint256 avg = (start - gasleft()) / 20;
             if (avg < best) best = avg;
         }
@@ -327,7 +333,9 @@ contract ArithProbeTest is Test {
         best = type(uint256).max;
         for (uint256 run; run < 3; ++run) {
             uint256 start = gasleft();
-            for (uint256 i; i < 20; ++i) probe.uncheckedSum(xs);
+            for (uint256 i; i < 20; ++i) {
+                probe.uncheckedSum(xs);
+            }
             uint256 avg = (start - gasleft()) / 20;
             if (avg < best) best = avg;
         }
@@ -337,7 +345,9 @@ contract ArithProbeTest is Test {
         best = type(uint256).max;
         for (uint256 run; run < 3; ++run) {
             uint256 start = gasleft();
-            for (uint256 i; i < 100; ++i) probe.mulDiv(a, b, d);
+            for (uint256 i; i < 100; ++i) {
+                probe.mulDiv(a, b, d);
+            }
             uint256 avg = (start - gasleft()) / 100;
             if (avg < best) best = avg;
         }
@@ -347,7 +357,9 @@ contract ArithProbeTest is Test {
         best = type(uint256).max;
         for (uint256 run; run < 3; ++run) {
             uint256 start = gasleft();
-            for (uint256 i; i < 100; ++i) probe.mulDivNaive(a, b, d);
+            for (uint256 i; i < 100; ++i) {
+                probe.mulDivNaive(a, b, d);
+            }
             uint256 avg = (start - gasleft()) / 100;
             if (avg < best) best = avg;
         }

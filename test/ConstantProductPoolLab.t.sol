@@ -322,7 +322,9 @@ contract ConstantProductPoolLabTest is Test {
     function test_swap_reverts_slippageBelowMin() public {
         _seed(safePool, SEED0, SEED1);
         uint256 out = safePool.getAmountOut(1e18, true);
-        vm.expectRevert(abi.encodeWithSelector(IConstantProductPoolLab.SlippageExceeded.selector, out + 1, out));
+        vm.expectRevert(
+            abi.encodeWithSelector(IConstantProductPoolLab.SlippageExceeded.selector, out + 1, out)
+        );
         safePool.swap(1e18, out + 1, true, address(this));
     }
 
@@ -349,7 +351,9 @@ contract ConstantProductPoolLabTest is Test {
         // alice has 0 shares — the test contract seeded the pool, so it holds
         // shares and would NOT revert (the prank makes the negative honest).
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IConstantProductPoolLab.InsufficientShares.selector, 0, 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(IConstantProductPoolLab.InsufficientShares.selector, 0, 1)
+        );
         safePool.removeLiquidity(1, address(this));
     }
 
@@ -367,12 +371,16 @@ contract ConstantProductPoolLabTest is Test {
     ///      touch the fee key — a fee key is an admin key (Kelp DAO/Drift class).
     function test_setSwapFee_nonOwner_reverts() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IConstantProductPoolLab.NotAuthorized.selector, alice));
+        vm.expectRevert(
+            abi.encodeWithSelector(IConstantProductPoolLab.NotAuthorized.selector, alice)
+        );
         safePool.setSwapFee(0);
     }
 
     function test_setSwapFee_outOfBounds_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IConstantProductPoolLab.FeeOutOfBounds.selector, 1_000));
+        vm.expectRevert(
+            abi.encodeWithSelector(IConstantProductPoolLab.FeeOutOfBounds.selector, 1_000)
+        );
         safePool.setSwapFee(1_000);
     }
 
