@@ -72,7 +72,10 @@ jobs:
         run: forge snapshot --check --tolerance 20 --no-match-test "\([^)]|invariant_" --no-match-path "test/*Fork*"
 
       - name: Coverage
-        run: forge coverage --report summary
+        # Gas-probe tests (test_gas_*, testTouch*) assert gasleft() deltas —
+        # coverage instrumentation inflates gas and breaks those assertions
+        # (Ch 1/2 methodology note: instrumentation distorts gasleft() tests).
+        run: forge coverage --report summary --no-match-test "gas|Touch"
 
       - name: Slither (protocol surface)
         # Lab/probe contracts are filtered via slither.config.json; findings are
