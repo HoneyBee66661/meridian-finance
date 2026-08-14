@@ -1,0 +1,41 @@
+name: fork
+
+# Ch 13: the fork layer (Ch 11 conventions). Fork tests are the slowest and most
+# expensive layer (real RPC state, archive-capable node) — they do NOT run on every
+# PR commit. They run on merge to main and on a nightly schedule.
+#
+# Tests self-skip when MAINNET_RPC_URL is unset (Ch 11: skip for "no RPC configured",
+# NEVER for "RPC broken"), so this job is safe even before the secret is provisioned.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"   # nightly: catches mainnet state drift (oracle answers, token behavior)
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fork:
+    name: Fork tests (pinned blocks)
+    runs-on: ubuntu-latest
+    env:
+      MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Fork tests
+        run: forge test --match-path "test/*Fork*" -vvv

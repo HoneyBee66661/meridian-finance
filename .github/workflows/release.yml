@@ -1,0 +1,58 @@
+name: release
+
+# Ch 13: tagged releases only. The module milestone (TOC: per-module tagged GitHub
+# release + testnet deployment with verified source) lands on `v*` tags — never on
+# a branch push. The deploy step is wired at Ch 39 (script/Deploy.s.sol) and requires
+# an environment-protected secret set; until then this job is the verify gate that
+# makes the tag trustworthy.
+#
+# Trust model (Ch 13): a tag is a claim — "this exact bytecode, from this exact
+# source, passed this exact gate". The release job re-runs the gate on the tagged
+# commit and records the artifact hash so the deployed bytecode is traceable to the
+# tag (forge inspect / cast keccak of creation code vs. verified source).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify tagged commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.ref }}   # exact tag, not a branch head
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Build + sizes
+        run: forge build --sizes
+
+      - name: Full gate on the tag
+        run: forge test -vvv && forge snapshot --check
+
+      - name: Record artifact hash
+        run: |
+          echo "creation-code keccak: $(cast keccak $(forge inspect src/MeridianVault.sol:MeridianVault creation-code 2>/dev/null || echo 0x))"
+          echo "tag: ${{ github.ref_name }}"
+
+  # deploy:
+  #   needs: verify
+  #   environment: testnet          # environment protection = human approval gate
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: foundry-rs/foundry-toolchain@v1
+  #     - name: Deploy (Ch 39)
+  #       run: forge script script/Deploy.s.sol --rpc-url ${{ secrets.MAINNET_RPC_URL }} --broadcast --verify
+  #       env:
+  #         PRIVATE_KEY: ${{ secrets.DEPLOYER_KEY }}   # OIDC preferred over static keys

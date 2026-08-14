@@ -1,0 +1,80 @@
+name: ci
+
+# Ch 13: the main gate. Runs on every push to main and every PR.
+# Layer order matters (cheapest/fastest first): fmt -> build+sizes -> unit/fuzz/invariant
+# (seeded) -> gas snapshot -> coverage -> SAST. Fork tests live in fork.yml (RPC-gated).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege for the built-in token (Ch 13 supply-chain convention):
+# the default GITHUB_TOKEN has `contents: write` — scope it down to read.
+permissions:
+  contents: read
+
+# One in-flight run per ref; a new push cancels the stale run (wasted-minutes control).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FOUNDRY_PROFILE: ci        # foundry.toml [profile.ci] — pinned fuzz seed
+  FOUNDRY_FUZZ_SEED: "1234"  # belt-and-suspenders: env var wins over config
+
+jobs:
+  gate:
+    name: Gate (fmt / build / test / gas / SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # never leave a usable token in .git
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Format check
+        run: forge fmt --check
+
+      - name: Build + contract sizes
+        # --sizes fails the build on EIP-170 (24 KB) violations — the gate Ch 14's
+        # MeridianToken and Ch 20's MeridianVault must pass.
+        run: forge build --sizes
+
+      - name: Unit + fuzz + invariant (seeded, fail_on_revert)
+        # Seed pinned via env; [invariant] fail_on_revert = true is in foundry.toml.
+        # Fork tests skip themselves when MAINNET_RPC_URL is unset (Ch 11) — the PR
+        # gate stays RPC-free; the real fork layer runs in fork.yml.
+        run: forge test -vvv
+
+      - name: Gas snapshot gate
+        # Fails if any test's gas moves by more than 20 units vs the committed
+        # .gas-snapshot. This is the enforcement point for the Ch 7/8 borrow-path
+        # budget (net ~101,500 gas). --diff prints the table on failure.
+        run: forge snapshot --check --diff --tolerance 20
+
+      - name: Coverage
+        run: forge coverage --report summary
+
+      - name: Slither (protocol surface)
+        # Lab/probe contracts are filtered via slither.config.json; findings are
+        # triaged in the PR, not mass-excluded. Severity gate flags (--fail-high /
+        # --fail-medium / --fail-pedantic) are documented in docs/ci-cd-playbook.md
+        # and tightened once the protocol surface exists (Ch 14+).
+        run: slither . --config-file slither.config.json
+
+      - name: Aderyn
+        uses: Cyfrin/aderyn-action@v1
