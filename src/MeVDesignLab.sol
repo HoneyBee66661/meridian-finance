@@ -20,7 +20,7 @@ contract MeVDesignLab is IMeVDesignLab {
 
     constructor() {
         deadline = block.timestamp + COMMIT_WINDOW;
-        revealAt = deadline + REVEAL_WINDOW;
+        revealAt = deadline; // reveal opens the moment commit closes — no dead hour
     }
 
     function commitBid(bytes32 commitment) external {

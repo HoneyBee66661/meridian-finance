@@ -10,7 +10,8 @@ contract MeVDesignLabTest is Test {
 
     function setUp() public {
         lab = new MeVDesignLab();
-        // default timestamp is 1; deadlines: commit=3601, reveal=7201, settle=10801
+        // default timestamp is 1; deadlines: commit=3601, reveal=3601, settle=7201
+        // (reveal opens the moment commit closes — no dead hour)
     }
 
     function _afterSettle() internal {
@@ -25,7 +26,7 @@ contract MeVDesignLabTest is Test {
         lab.commitBid(c1);
         vm.prank(address(0xB));
         lab.commitBid(c2);
-        vm.warp(block.timestamp + 2 hours + 1); // past commit deadline, in reveal window
+        vm.warp(block.timestamp + 1 hours + 30 minutes); // past commit deadline, inside reveal window
 
         vm.prank(address(0xA));
         lab.revealBid(100 ether, bytes32("s1"));
@@ -65,7 +66,7 @@ contract MeVDesignLabTest is Test {
         bytes32 c1 = keccak256(abi.encode(address(0xA), 100 ether, bytes32("s1")));
         vm.prank(address(0xA));
         lab.commitBid(c1);
-        vm.warp(block.timestamp + 2 hours + 1);
+        vm.warp(block.timestamp + 1 hours + 30 minutes); // inside reveal window, before settle
         vm.expectRevert(); // NotWinner (commitment mismatch)
         vm.prank(address(0xA));
         lab.revealBid(100 ether, bytes32("WRONG"));
