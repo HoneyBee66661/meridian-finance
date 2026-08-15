@@ -418,11 +418,11 @@ contract MeridianVaultTest is Test {
         assertEq(vault.borrowCapacity(alice), 3000e6);
 
         vm.expectEmit(true, true, true, true, address(vault));
-        emit IMeridianVault.CollateralFactorSet(uint64(CF), uint64(8000));
-        vault.setCollateralFactor(8000);
+        emit IMeridianVault.CollateralFactorSet(uint64(CF), uint64(7900));
+        vault.setCollateralFactor(7900);
 
-        assertEq(vault.collateralFactorBps(), 8000);
-        assertEq(vault.borrowCapacity(alice), 3200e6);
+        assertEq(vault.collateralFactorBps(), 7900);
+        assertEq(vault.borrowCapacity(alice), 3160e6);
     }
 
     function test_supplyDebtLiquidity_enablesBorrowing() public {
@@ -456,7 +456,7 @@ contract MeridianVaultTest is Test {
     function test_setCollateralFactor_onlyAdmin() public {
         _expectNotAdmin(alice);
         vm.prank(alice);
-        vault.setCollateralFactor(8000);
+        vault.setCollateralFactor(7900);
     }
 
     function test_setLiquidationThreshold_onlyAdmin() public {
@@ -508,6 +508,28 @@ contract MeridianVaultTest is Test {
             abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(10_001))
         );
         vault.setCollateralFactor(10_001);
+    }
+
+    function test_setCollateralFactor_atOrAboveLiquidationThreshold_reverts() public {
+        // Ch 39 audit finding (full-system audit, invariant I4): the setter
+        // previously checked only `CF <= BPS`, so governance could raise CF
+        // to or above LT and silently erase the safety buffer — a max-borrow
+        // position would sit at HF <= 1 (liquidatable on entry). The
+        // cross-check now mirrors the constructor: LT * BPS > CF * WAD.
+        // Boundary cases: CF == LT (8000 == 0.8e18) and CF > LT (9000) both
+        // revert; CF just below LT (7999) is valid and keeps HF >= 1.0001.
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(8000))
+        );
+        vault.setCollateralFactor(8000);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(9000))
+        );
+        vault.setCollateralFactor(9000);
+
+        vault.setCollateralFactor(7999);
+        assertEq(vault.collateralFactorBps(), 7999);
     }
 
     function test_setLiquidationThreshold_atCollateralFactor_reverts() public {

@@ -346,6 +346,16 @@ contract MeridianVault is IMeridianVault, AccessControl {
         if (collateralFactorBps_ > BPS) {
             revert InvalidCollateralFactor(collateralFactorBps_);
         }
+        // Ch 39 audit finding: the constructor validates the safety buffer
+        // (LT * BPS > CF * WAD — liquidation threshold strictly above the
+        // collateral factor), but this setter did NOT, so governance could
+        // raise CF to or above LT and silently erase the buffer: a max-borrow
+        // position would then sit at HF <= 1 (liquidatable on entry). The
+        // cross-check is now identical to the constructor's, so the invariant
+        // "LT > CF" holds across the whole governance surface.
+        if (_liquidationThreshold * BPS <= uint256(collateralFactorBps_) * WAD) {
+            revert InvalidCollateralFactor(collateralFactorBps_);
+        }
         emit CollateralFactorSet(_collateralFactorBps, collateralFactorBps_);
         _collateralFactorBps = collateralFactorBps_;
     }
