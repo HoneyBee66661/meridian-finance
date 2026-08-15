@@ -35,6 +35,15 @@ contract UpgradeLabTest is Test {
         assertTrue(impl.code.length > 0);
     }
 
+    /// @dev Calls route through the proxy to the implementation (fallback →
+    ///      delegatecall), proving routing, not just slot state.
+    function testDelegatecallRoutesCorrectly() public {
+        proxy.upgradeTo(address(new ImplV2()));
+        (bool ok, bytes memory data) = address(proxy).call(abi.encodeWithSignature("version()"));
+        assertTrue(ok);
+        assertEq(abi.decode(data, (uint256)), 2);
+    }
+
     /// @dev Upgrading to an EOA (no code) reverts.
     function testNoCodeTargetRejected() public {
         vm.expectRevert(

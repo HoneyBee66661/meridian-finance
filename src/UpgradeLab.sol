@@ -4,10 +4,12 @@ pragma solidity ^0.8.24;
 import {IUpgradeLab} from "./IUpgradeLab.sol";
 
 /// @title UpgradeLab
-/// @notice Pedagogical EIP-1967 proxy (admin-slot + delegatecall).
-/// @dev NOT part of the protocol — the pattern lab. The delegatecall fallback
-///      is omitted for brevity; the production version forwards non-admin
-///      calls to the implementation (transparent proxy).
+/// @notice Pedagogical EIP-1967 implementation-switching proxy (admin slot +
+///         delegatecall fallback).
+/// @dev NOT part of the protocol — the pattern lab. The fallback forwards
+///      unrecognized calls to the implementation; the admin-path routing of a
+///      full transparent proxy (OZ TransparentUpgradeableProxy) is absent:
+///      admin() answers directly and every caller, admin or not, is routed.
 contract UpgradeLab is IUpgradeLab {
     bytes32 private constant ADMIN_SLOT =
         0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
@@ -26,6 +28,20 @@ contract UpgradeLab is IUpgradeLab {
 
     function admin() public view returns (address) {
         return _getSlot(ADMIN_SLOT);
+    }
+
+    /// @dev Routes unrecognized calls to the implementation via delegatecall.
+    ///      Caller-based admin routing is not implemented (pattern lab only).
+    fallback() external payable {
+        address impl = _getSlot(IMPL_SLOT);
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+            let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)
+            returndatacopy(0, 0, returndatasize())
+            switch result
+            case 0 { revert(0, returndatasize()) }
+            default { return(0, returndatasize()) }
+        }
     }
 
     function _getSlot(bytes32 slot) internal view returns (address value) {
