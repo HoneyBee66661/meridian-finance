@@ -36,8 +36,8 @@ interface IArithProbe {
         external
         pure
         returns (uint256);
-    /// @notice Quadratic bias term (r·t)²/2 — borrower-favorable compounding
-    ///         correction (locked convention: per-second linear + r²/2 bias).
+    /// @notice Quadratic compounding premium (r·t)²/2 — the discrete-accrual
+    ///         correction (locked convention: per-second linear + r²/2 premium).
     function accrueQuadratic(uint256 ratePerSecond, uint256 secondsElapsed)
         external
         pure

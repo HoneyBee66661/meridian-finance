@@ -30,7 +30,7 @@ contract MeridianVaultTest is Test {
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
-    uint256 internal constant LT = 1.05e18; // liquidation threshold (WAD HF cutoff)
+    uint256 internal constant LT = 0.8e18; // liquidation threshold (WAD); liquidation begins at LTV > LT
     uint256 internal constant ETH_PRICE = 2000e8; // 8-dec feed style
     uint256 internal constant USDC_PRICE = 1e8;
     uint256 internal constant CF = 7500; // 75%
@@ -155,11 +155,14 @@ contract MeridianVaultTest is Test {
         assertEq(vault.totalDebt(), 0);
     }
 
-    function test_borrow_exactlyCapacity_healthFactorOne() public {
+    function test_borrow_exactlyCapacity_healthFactorAboveOne() public {
         _supply(3000e6);
         _deposit(alice, 2e18);
         _borrow(alice, 3000e6);
-        assertEq(vault.healthFactor(alice), 1e18);
+        // At max borrow (LTV = CF = 75%), HF = LT/CF = 0.8/0.75 = 1.0667 > 1:
+        // the maximum borrower is healthy, never liquidatable.
+        assertEq(vault.healthFactor(alice), 1_066_666_666_666_666_666);
+        assertFalse(vault.isLiquidatable(alice));
         assertEq(vault.debtOf(alice), 3000e6);
     }
 
@@ -365,10 +368,12 @@ contract MeridianVaultTest is Test {
         _supply(3000e6);
         _deposit(alice, 2e18);
         _borrow(alice, 2000e6);
-        assertEq(vault.healthFactor(alice), 1.5e18);
+        // HF = 4000e8 * 0.8 / 2000e8 = 1.6 (the chapter's Production Example)
+        assertEq(vault.healthFactor(alice), 1.6e18);
 
         oracle.setPrice(address(eth), 1200e8); // -40%
-        assertEq(vault.healthFactor(alice), 0.9e18);
+        // HF = 2400e8 * 0.8 / 2000e8 = 0.96 < 1 -> liquidatable
+        assertEq(vault.healthFactor(alice), 0.96e18);
         assertTrue(vault.isLiquidatable(alice));
 
         vm.expectRevert(
@@ -379,15 +384,24 @@ contract MeridianVaultTest is Test {
     }
 
     function test_priceDrop_bufferZone_liquidatableButSolvent() public {
-        oracle.setPrice(address(eth), 1500e8);
         _supply(3000e6);
-        _deposit(alice, 2e18); // capacity 2250e6 at 1500
+        _deposit(alice, 2e18); // collateral value 4000e8 at $2000
         _borrow(alice, 2200e6);
+        // HF = 4000e8 * 0.8 / 2200e8 = 1.4545 -> healthy, not liquidatable
+        assertEq(vault.healthFactor(alice), 1_454_545_454_545_454_545);
+        assertFalse(vault.isLiquidatable(alice));
 
+        // Price drops to $1370: collateral value 2740e8, LT-adjusted 2192e8,
+        // HF = 2192/2200 = 0.9964 < 1 -> liquidatable, yet still solvent:
+        // debt (2200e8) is below collateral value (2740e8) — the liquidatable-
+        // but-solvent zone (LTV 80.3% between LT 80% and 100%).
+        oracle.setPrice(address(eth), 1370e8);
         uint256 hf = vault.healthFactor(alice);
-        assertGt(hf, 1e18); // still solvent (above the hard line)
-        assertLt(hf, LT); // but inside the buffer zone
+        assertLt(hf, 1e18);
         assertTrue(vault.isLiquidatable(alice));
+        uint256 collValue = Math.mulDiv(2e18, 1370e8, 1e18);
+        uint256 debtValue = Math.mulDiv(2200e6, USDC_PRICE, 1e6);
+        assertLt(debtValue, collValue);
     }
 
     function test_priceRise_increasesCapacity() public {
@@ -448,7 +462,7 @@ contract MeridianVaultTest is Test {
     function test_setLiquidationThreshold_onlyAdmin() public {
         _expectNotAdmin(alice);
         vm.prank(alice);
-        vault.setLiquidationThreshold(1.1e18);
+        vault.setLiquidationThreshold(0.9e18);
     }
 
     function test_setLiquidationIncentive_onlyAdmin() public {
@@ -496,11 +510,14 @@ contract MeridianVaultTest is Test {
         vault.setCollateralFactor(10_001);
     }
 
-    function test_setLiquidationThreshold_atOne_reverts() public {
+    function test_setLiquidationThreshold_atCollateralFactor_reverts() public {
+        // LT must sit strictly above the collateral factor or the safety
+        // buffer vanishes: at LT == CF (75%) a max-borrow position would sit
+        // at HF == 1, right on the liquidation line.
         vm.expectRevert(
-            abi.encodeWithSelector(IMeridianVault.InvalidLiquidationThreshold.selector, 1e18)
+            abi.encodeWithSelector(IMeridianVault.InvalidLiquidationThreshold.selector, 0.75e18)
         );
-        vault.setLiquidationThreshold(1e18);
+        vault.setLiquidationThreshold(0.75e18);
     }
 
     function test_setLiquidationIncentive_zero_reverts() public {
@@ -544,12 +561,20 @@ contract MeridianVaultTest is Test {
         );
     }
 
-    function test_constructor_liquidationThresholdAtOne_reverts() public {
+    function test_constructor_liquidationThresholdAboveOne_reverts() public {
+        // LT is a WAD fraction of collateral value; > 1e18 is off-axis.
         vm.expectRevert(
-            abi.encodeWithSelector(IMeridianVault.InvalidLiquidationThreshold.selector, 1e18)
+            abi.encodeWithSelector(IMeridianVault.InvalidLiquidationThreshold.selector, 1.05e18)
         );
         new MeridianVault(
-            address(eth), address(usdc), oracle, zeroModel, uint64(CF), 1e18, uint64(LI), uint64(RF)
+            address(eth),
+            address(usdc),
+            oracle,
+            zeroModel,
+            uint64(CF),
+            1.05e18,
+            uint64(LI),
+            uint64(RF)
         );
     }
 

@@ -225,7 +225,7 @@ contract ArithProbeTest is Test {
         assertEq(probe.fromWad(probe.toWad(x, decimals), decimals), x);
     }
 
-    // ── rates (per-second linear + r²/2 borrower-favorable bias) ─────────────
+    // ── rates (per-second linear + r²/2 compounding premium) ─────────────────
 
     function test_rates_zeroRate_isZero() public {
         assertEq(probe.accrue(0, SECONDS_PER_YEAR), 0);
@@ -244,7 +244,7 @@ contract ArithProbeTest is Test {
 
     function test_rates_oneYear_biasTermPinned() public {
         // accrue = linear + floor((linear)²/2RAY): the one-year result differs
-        // from nominal by exactly the r²/2 correction term (borrower-favorable).
+        // from nominal by exactly the r²/2 compounding premium term.
         uint256 annual = (5 * RAY) / 100;
         uint256 perSecond = annual / SECONDS_PER_YEAR;
         uint256 linear = probe.accrueLinear(perSecond, SECONDS_PER_YEAR);
@@ -252,7 +252,7 @@ contract ArithProbeTest is Test {
         uint256 bias = probe.accrueQuadratic(perSecond, SECONDS_PER_YEAR);
         assertEq(bias, probe.mulDiv(linear, linear, 2 * RAY));
         assertEq(total, linear + bias);
-        assertGt(total, linear); // borrower-favorable: bias is strictly positive
+        assertGt(total, linear); // compounding premium is strictly positive
     }
 
     function testFuzz_rates_nonDecreasing(uint256 r, uint256 t1, uint256 t2) public {

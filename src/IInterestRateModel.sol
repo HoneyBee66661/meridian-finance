@@ -13,7 +13,16 @@ pragma solidity ^0.8.24;
 ///      the model reads it, it does not re-derive it. The vault's definition
 ///      (Ch 20, locked): `utilization = totalDebt / (totalDebt + cash)` where
 ///      `cash` is the vault's lendable debt-token balance.
+///      Errors `InvalidKink`/`InvalidReserveFactor` were added ADDITIVELY in
+///      Ch 21 (constructor-time validation of `InterestRateModel`); existing
+///      function ABIs are untouched (IMeridianOracle precedent, Ch 20).
 interface IInterestRateModel {
+    /// @notice Constructor rejected a kink utilization above 100% (1e18).
+    error InvalidKink(uint256 kink);
+
+    /// @notice Constructor rejected a reserve factor above 100% (10_000 bps).
+    error InvalidReserveFactor(uint64 reserveFactorBps);
+
     /// @notice Per-second borrow rate at a given utilization.
     /// @param utilization Current market utilization, WAD (1e18 == 100%).
     /// @return borrowRate Per-second borrow rate, WAD.

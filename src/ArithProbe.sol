@@ -124,7 +124,7 @@ contract ArithProbe is IArithProbe {
         return amount / 10 ** (18 - decimals);
     }
 
-    // ── per-second accrual (locked: linear + r²/2 borrower-favorable bias) ───
+    // ── per-second accrual (locked: linear + r²/2 compounding premium) ───────
 
     /// @inheritdoc IArithProbe
     function accrueLinear(uint256 ratePerSecond, uint256 secondsElapsed)

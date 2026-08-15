@@ -42,10 +42,13 @@ interface IMeridianVault {
     ///         fraction of collateral value usable as borrow capacity.
     function collateralFactorBps() external view returns (uint64);
 
-    /// @notice Liquidation threshold in WAD (e.g. 1.05e18). A position with
-    ///         `healthFactor < liquidationThreshold` is liquidatable — the
-    ///         buffer zone 1 < HF < threshold where liquidations activate
-    ///         while the position is still solvent. Ch 24-25 build on this.
+    /// @notice Liquidation threshold in WAD (e.g. 0.8e18 == 80%): the fraction
+    ///         of collateral value at which liquidation begins. The health
+    ///         factor is `collateralValue * LT / debtValue`, so a position is
+    ///         liquidatable when HF < 1 — equivalently when debt exceeds
+    ///         LT * collateralValue. LT must sit strictly above the collateral
+    ///         factor (the safety buffer) and at most 1e18. Ch 24-25 build on
+    ///         this.
     function liquidationThreshold() external view returns (uint256);
 
     /// @notice Liquidation incentive in basis points (e.g. 1000 == 10% bonus
@@ -85,13 +88,15 @@ interface IMeridianVault {
     function borrowCapacity(address user) external view returns (uint256);
 
     /// @notice Health factor of `user` in WAD:
-    ///         `collateralValue * CF / debtValue`. No debt -> type(uint256).max;
-    ///         no collateral -> 0. Must stay above 1 (the borrow/withdraw hard
-    ///         line); the liquidation threshold sits above 1.
+    ///         `collateralValue * LT / debtValue` (liquidation threshold, not
+    ///         the collateral factor). No debt -> type(uint256).max;
+    ///         no collateral -> 0. Must stay at or above 1 (the borrow/withdraw
+    ///         hard line); a position is liquidatable when HF drops below 1.
     function healthFactor(address user) external view returns (uint256);
 
-    /// @notice True when `healthFactor(user) < liquidationThreshold` — the
-    ///         buffer-zone predicate the Ch 24 liquidation engine consumes.
+    /// @notice True when `healthFactor(user) < 1e18` — i.e. the user's debt
+    ///         exceeds `liquidationThreshold * collateralValue`. The predicate
+    ///         the Ch 24 liquidation engine consumes.
     function isLiquidatable(address user) external view returns (bool);
 
     // ---- User actions ------------------------------------------------------
@@ -156,7 +161,8 @@ interface IMeridianVault {
     error InvalidConstructorAddress(address account);
 
     /// @notice Constructor parameters were internally inconsistent
-    ///         (e.g. a liquidation threshold not strictly above 1).
+    ///         (e.g. a liquidation threshold above 1 or at/below the
+    ///         collateral factor).
     error InvalidMarketParams();
 
     /// @notice A zero amount was passed where a positive amount is required.
@@ -180,7 +186,8 @@ interface IMeridianVault {
     /// @notice Collateral factor must be at most 100%.
     error InvalidCollateralFactor(uint64 value);
 
-    /// @notice Liquidation threshold must be strictly above 1 (WAD).
+    /// @notice Liquidation threshold must be at most 1 (WAD) and strictly above
+    ///         the collateral factor.
     error InvalidLiquidationThreshold(uint256 value);
 
     /// @notice Liquidation incentive must be non-zero.
