@@ -4,6 +4,6 @@
 # StaticProbe lab section) — excluded here so the gate measures the protocol
 # surface only, mirroring slither.config.json's filter_paths.
 version = 1
-root = {}
+root = "."
 src = "src/"
 exclude = ["Probe", "Mini", "EvmMiniature", "StorageLab"]
