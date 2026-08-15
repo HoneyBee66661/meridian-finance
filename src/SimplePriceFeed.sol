@@ -5,13 +5,18 @@ import {IChainlinkFeed} from "./IChainlinkFeed.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title SimplePriceFeed
-/// @notice Ch 40 testnet price feed — a pokeable, Chainlink-SHAPED feed
-///         implementing `IChainlinkFeed`, for use behind `OracleRegistry`
-///         (Ch 22) on a testnet where no real aggregator proxy exists.
+/// @notice Ch 40 testnet price feed — a minimal mock implementing the subset
+///         of the Chainlink AggregatorV3-style interface consumed by
+///         `OracleRegistry` (Ch 22), for use on a testnet where no real
+///         aggregator proxy exists.
 /// @dev NOT production-grade: a single admin can set any price. It exists
 ///      so the capstone deploy exercises the REAL registry path (primary
 ///      feed + staleness check + normalization) instead of bypassing it.
-///      Each deployment is one feed = one asset (Chainlink proxy shape).
+///      Do not treat this mock as a real Chainlink aggregator — it
+///      implements only the two functions the registry reads, and nothing
+///      else (no description/version/getRoundData, no medianization, no
+///      heartbeat network). Each deployment is one feed = one asset
+///      (Chainlink proxy shape).
 contract SimplePriceFeed is IChainlinkFeed, Ownable {
     uint8 private immutable _decimals;
 

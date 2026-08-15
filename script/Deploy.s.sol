@@ -20,9 +20,11 @@ import {TestnetToken} from "../src/TestnetToken.sol";
 /// @dev Usage (testnet):
 ///      forge script script/Deploy.s.sol:Deploy --rpc-url $SEPOLIA_RPC \
 ///          --broadcast --verify
-///      The deployer is the broadcast sender (`msg.sender` inside `run()`);
-///      in tests the caller is the test contract, which also lets
-///      DeploySmoke.t.sol exercise the exact same sequence.
+///      The deployment SEQUENCE lives in `_deploy(deployer)` — one function,
+///      attributed to the deployer in BOTH contexts (the signing key under
+///      `forge script --broadcast`, the test contract in DeploySmoke).
+///      `deploy()` and `run()` are thin entries: same sequence, two entry
+///      points.
 contract Deploy is Script {
     struct Deployment {
         TestnetToken weth;
@@ -44,12 +46,28 @@ contract Deploy is Script {
     uint256 private constant LT = 0.8e18; // 80% liquidation threshold
     uint256 private constant LI_BPS = 1000; // 10% liquidation incentive
     uint256 private constant RF_BPS = 2000; // 20% reserve factor
-    uint256 private constant FEED_DECIMALS = 8; // USD feed convention
+    uint256 private constant FEED_DECIMALS = 8; // example mock USD-feed precision
     uint256 private constant MAX_STALENESS = 1 hours;
     uint256 private constant MER_INITIAL_SUPPLY = 10_000_000e18; // 10M MER
 
-    function run() external returns (Deployment memory d) {
-        address deployer = msg.sender;
+    /// @notice Public entry for the test context: executes the deployment
+    ///         sequence attributed to the caller (`msg.sender` = the test
+    ///         contract in DeploySmoke).
+    function deploy() public returns (Deployment memory d) {
+        return _deploy(msg.sender);
+    }
+
+    /// @notice Executes the deployment sequence: deploys, wires, and returns
+    ///         the full `Deployment`. Sender attribution is part of the
+    ///         sequence — the wiring calls are deployer-gated (feed setters,
+    ///         registry `setFeed`, constructor admin roles), and the broadcast
+    ///         cheatcode is what attributes every creation and call to
+    ///         `deployer` in BOTH execution contexts: under
+    ///         `forge script --broadcast` (deployer = the signing key) and
+    ///         inside DeploySmoke (deployer = the test contract).
+    /// @param deployer The address every privileged wiring step is
+    ///        attributed to.
+    function _deploy(address deployer) internal returns (Deployment memory d) {
         d.deployer = deployer;
 
         vm.startBroadcast(deployer);
@@ -102,6 +120,12 @@ contract Deploy is Script {
         d.factory = new MeridianFactory();
 
         vm.stopBroadcast();
+    }
+
+    /// @notice Thin entry for `forge script --broadcast`: delegates to the
+    ///         same sequence with `msg.sender` (the signing key) as deployer.
+    function run() external returns (Deployment memory d) {
+        return _deploy(msg.sender);
     }
 
     /// @dev APR (WAD) -> per-second rate, the InterestRateModel convention.
