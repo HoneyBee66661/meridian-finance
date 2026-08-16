@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {MeridianVault} from "../src/MeridianVault.sol";
 import {MeridianVaultHandler} from "./MeridianVaultHandler.sol";
 import {MockERC20, FixedRateInterestRateModel, MockOracle} from "./MeridianVaultMocks.sol";
@@ -16,20 +17,39 @@ import {MockERC20, FixedRateInterestRateModel, MockOracle} from "./MeridianVault
 ///           (so HF >= LT/CF > 1) and withdraw enforces HF >= 1; with zero
 ///           interest there is no drift to cross the line. This is the
 ///           v1 design guarantee Ch 20 states and Ch 39's audit pins.
+///           NON-VACUOUS (Ch 39 review B2): the handler's pre-checks mirror
+///           the vault's own checks (fail_on_revert compliance). If the
+///           vault allowed more than the mirror predicts — a vault
+///           correctness bug, e.g. a missing capacity or HF check — the
+///           handler would NOT skip the call and a user would reach
+///           HF < 1; I1 catches that. I1 tests the vault, not the handler.
 ///      I2 — collateral conservation: ghost == sum(collateralOf) over the
 ///           fixed 3-user set.
 ///      I3 — debt books exactly: sum(debtOf) == totalDebt. Snapshot folding
-///           (Compound-style principal/index) makes the equality exact under
-///           a zero rate model; only ceil-rounding dust could break it.
+///           (Compound-style principal/index) makes the equality EXACT under
+///           a zero rate model: with a constant borrow index,
+///           debtOf(u) = principal(u) exactly, no rounding at any step.
+///           Rounding dust appears only when the index compounds
+///           (non-zero rate model), where per-user debt is derived via
+///           fixed-point division.
 ///      I4 — safety buffer strictly positive: LT * BPS > CF * WAD. The
 ///           constructor enforces it and (since the Ch 39 fix) so do BOTH
 ///           setters — this pins the rule across the whole governance surface.
+///      I5 — oracle-seam consistency: the vault's public healthFactor must
+///           equal the health factor recomputed independently from the
+///           oracle's current prices. Pins the vault's HF math against the
+///           oracle it consumes (the R=1 trust anchor, Ch 22): a vault that
+///           cached prices, mis-scaled decimals, or diverged in rounding
+///           would trip this. Under the frozen market both sides use the
+///           same floor mulDiv, so the equality is exact.
 ///      Handler bounds the CF setter to the constructor's own validity domain,
 ///      so sequences stay valid under fail_on_revert; the audit FINDING that
 ///      motivated the fix is proven by the dedicated unit test in
 ///      MeridianVaultTest (test_setCollateralFactor_atOrAboveLiquidationThreshold_reverts),
 ///      not by letting the handler hit a revert edge.
 contract MeridianVaultInvariant is Test {
+    using Math for uint256;
+
     uint256 private constant WAD = 1e18;
     uint256 private constant BPS = 10_000;
 
@@ -115,5 +135,33 @@ contract MeridianVaultInvariant is Test {
             uint256(vault.collateralFactorBps()) * WAD,
             "LT * BPS <= CF * WAD - safety buffer erased"
         );
+    }
+
+    /// @dev I5 — oracle-seam consistency (Ch 39 review C1): the vault's
+    ///      public healthFactor must equal the value recomputed here from
+    ///      the oracle's CURRENT prices and the vault's public parameters.
+    ///      This is the one invariant that crosses the vault-oracle seam
+    ///      (the R=1 trust anchor, Ch 22): a vault that cached prices at
+    ///      deposit time, mis-scaled decimals, or diverged in rounding
+    ///      from the independent recompute would trip it. Under the frozen
+    ///      market both sides are deterministic floor mulDiv, so the
+    ///      equality is exact.
+    function invariant_I5_oracleSeamConsistency() public view {
+        uint256 collPrice = vault.oracle().getPrice(address(eth));
+        uint256 debtPrice = vault.oracle().getPrice(address(usdc));
+        uint256 lt = vault.liquidationThreshold();
+        for (uint256 i = 0; i < 3; ++i) {
+            address u = users[i];
+            uint256 debt = vault.debtOf(u);
+            if (debt == 0) continue;
+            uint256 collValue = vault.collateralOf(u).mulDiv(collPrice, 10 ** eth.decimals());
+            uint256 debtValue = debt.mulDiv(debtPrice, 10 ** usdc.decimals());
+            uint256 expectedHF = collValue.mulDiv(lt, WAD).mulDiv(WAD, debtValue);
+            assertEq(
+                vault.healthFactor(u),
+                expectedHF,
+                "oracle-seam: vault HF != independent oracle recompute"
+            );
+        }
     }
 }
