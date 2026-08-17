@@ -7,8 +7,8 @@ core → security → L2s → account abstraction → full-stack). Every chapter
 lab that is materialized, compile-verified, and tested in this repository.
 
 > 📚 **Curriculum (theory track):** the finalized chapter text lives in
-> [`curriculum/`](curriculum/) — Module 1 (Ch 1–5) is published, chapters 6+
-> ship as they are finalized.
+> [`curriculum/`](curriculum/) — all **40 chapters (Ch 1–40)** are published,
+> finalized through the external-review loop (errata applied, byte-verified).
 
 > **Positioning (honest):** this is a *learning* codebase with production-grade
 > discipline — locked conventions, a full test suite (unit + fuzz + invariant),
@@ -50,8 +50,8 @@ forge test           # unit + fuzz + invariant (CI seed)
 forge test --match-path "test/*Fork*"   # fork tests — needs MAINNET_RPC_URL
 ```
 
-- **344+ tests, 0 failed, 28+ suites** (unit, fuzz, invariant, gas probes)
-- 2 invariant suites with adversarial handlers (conservation, no-free-assets)
+- **542 tests, 0 failed, 49 suites** (unit, fuzz, invariant, gas probes)
+- 3 invariant suites with adversarial handlers (conservation, no-free-assets, oracle-seam)
 - Fork layer (Ch 11): WETH/USDT/Chainlink/Uniswap v3 state at pinned mainnet block
 - CI (`.github/workflows/`): lint/unit on PR, fork nightly, release (Ch 13)
 - `.gas-snapshot` tracked for gas regression (Ch 13 gate)
