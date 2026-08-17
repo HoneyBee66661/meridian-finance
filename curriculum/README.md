@@ -81,23 +81,23 @@ standalone or in sequence.
 | # | Chapter | File | Status |
 |---|---------|------|--------|
 | 33 | Account Abstraction | [`chapters/33_Account_Abstraction.md`](chapters/33_Account_Abstraction.md) | ✅ Finalized |
-| 34 | MEV Fundamentals | — | 🚧 Draft (review pending) |
-| 35 | MEV-Aware Protocol Design | — | 🚧 Draft (review pending) |
+| 34 | MEV Fundamentals | [`chapters/34_MEV_Fundamentals.md`](chapters/34_MEV_Fundamentals.md) | ✅ Finalized |
+| 35 | MEV-Aware Protocol Design | [`chapters/35_MEV_Aware_Protocol_Design.md`](chapters/35_MEV_Aware_Protocol_Design.md) | ✅ Finalized |
 
 ## Module 9 — Full-Stack & Operations (Ch 36–38)
 
 | # | Chapter | File | Status |
 |---|---------|------|--------|
-| 36 | Frontend Stack: Viem + Wagmi + Next.js | — | 🚧 Draft (review pending) |
-| 37 | Indexing & Analytics | — | 🚧 Draft (review pending) |
-| 38 | Upgradeability & Operations | — | 🚧 Draft (review pending) |
+| 36 | Frontend Stack: Viem + Wagmi + Next.js | [`chapters/36_Frontend_Stack_Viem_Wagmi_Nextjs.md`](chapters/36_Frontend_Stack_Viem_Wagmi_Nextjs.md) | ✅ Finalized |
+| 37 | Indexing & Analytics | [`chapters/37_Indexing_and_Analytics.md`](chapters/37_Indexing_and_Analytics.md) | ✅ Finalized |
+| 38 | Upgradeability & Operations | [`chapters/38_Upgradeability_and_Operations.md`](chapters/38_Upgradeability_and_Operations.md) | ✅ Finalized |
 
 ## Module 10 — Capstone (Ch 39–40)
 
 | # | Chapter | File | Status |
 |---|---------|------|--------|
-| 39 | Capstone Prep: Full-System Audit | — | ⏳ Planned |
-| 40 | Capstone: Launch | — | ⏳ Planned |
+| 39 | Capstone Prep: Full-System Audit | [`chapters/39_Capstone_Prep_Full_System_Audit.md`](chapters/39_Capstone_Prep_Full_System_Audit.md) | ✅ Finalized |
+| 40 | Capstone: Launch | [`chapters/40_Capstone_Launch.md`](chapters/40_Capstone_Launch.md) | ✅ Finalized |
 
 ## How to read a chapter
 
