@@ -53,7 +53,10 @@ contract Vault4626LabTest is Test {
 
     /// @dev Run the canonical attack sequence against `vault`. Returns the
     ///      victim's minted shares and the attacker's redemption proceeds.
-    function _runAttack(IVault4626Lab vault) internal returns (uint256 victimShares, uint256 attackerProceeds) {
+    function _runAttack(IVault4626Lab vault)
+        internal
+        returns (uint256 victimShares, uint256 attackerProceeds)
+    {
         // t1: attacker seeds 1 wei -> 1 share (genesis 1:1 in both vaults)
         token.mint(alice, 1 + DONATION + VICTIM_DEPOSIT);
         vm.startPrank(alice);
@@ -116,11 +119,15 @@ contract Vault4626LabTest is Test {
     function test_solvency_convertToAssetsOfTotalSupply_leTotalAssets() public {
         _seed(virtualVault, 1_000);
         token.transfer(address(virtualVault), 1);
-        assertLe(virtualVault.convertToAssets(virtualVault.totalSupply()), virtualVault.totalAssets());
+        assertLe(
+            virtualVault.convertToAssets(virtualVault.totalSupply()), virtualVault.totalAssets()
+        );
 
         // after a fresh deposit at the skewed price, still solvent
         virtualVault.deposit(1_000, address(this));
-        assertLe(virtualVault.convertToAssets(virtualVault.totalSupply()), virtualVault.totalAssets());
+        assertLe(
+            virtualVault.convertToAssets(virtualVault.totalSupply()), virtualVault.totalAssets()
+        );
     }
 
     /// @dev Floor/floor round-trips never mint value (the Ch 12 invariant,
@@ -143,7 +150,7 @@ contract Vault4626LabTest is Test {
     /// @dev Naive vault: the victim's 1e21 deposit mints ZERO shares and the
     ///      attacker redeems the entire pot. Canonical t11s numbers.
     function test_inflationAttack_naive_victimDepositCaptured() public {
-        (uint256 victimShares, ) = _runAttack(naive);
+        (uint256 victimShares,) = _runAttack(naive);
         assertEq(victimShares, 0); // floor(1e21 * 1 / (1e21+1)) == 0
         assertEq(naive.balanceOf(bob), 0);
     }
@@ -253,7 +260,9 @@ contract Vault4626LabTest is Test {
         virtualVault.deposit(1_000, alice);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(IVault4626Lab.UnauthorizedCaller.selector, bob, alice));
+        vm.expectRevert(
+            abi.encodeWithSelector(IVault4626Lab.UnauthorizedCaller.selector, bob, alice)
+        );
         vm.prank(bob);
         virtualVault.withdraw(100, bob, alice);
     }

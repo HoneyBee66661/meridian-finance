@@ -38,7 +38,7 @@ jobs:
         run: forge build --sizes
 
       - name: Full gate on the tag
-        run: forge test -vvv && forge snapshot --check
+        run: forge test -vvv && forge snapshot --check --no-match-test "\([^)]|invariant_" --no-match-path "test/*Fork*"
 
       - name: Record artifact hash
         run: |

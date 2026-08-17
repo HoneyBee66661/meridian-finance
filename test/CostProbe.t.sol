@@ -20,7 +20,7 @@ contract CostProbeTest is Test {
         uint256 best = type(uint256).max;
         for (uint256 i; i < 8; ++i) {
             uint256 g0 = gasleft();
-            (bool ok, ) = target.call(abi.encodeWithSelector(sig, k));
+            (bool ok,) = target.call(abi.encodeWithSelector(sig, k));
             require(ok, "call failed");
             uint256 used = g0 - gasleft();
             if (used < best) best = used;

@@ -13,8 +13,7 @@ library NamespacedStorageLab {
     /// @return The 256-byte-aligned namespace slot.
     function namespace(string memory id) internal pure returns (bytes32) {
         return bytes32(
-            (uint256(keccak256(abi.encode(uint256(keccak256(bytes(id))) - 1))))
-            & ~uint256(0xff)
+            (uint256(keccak256(abi.encode(uint256(keccak256(bytes(id))) - 1)))) & ~uint256(0xff)
         );
     }
 
@@ -22,20 +21,20 @@ library NamespacedStorageLab {
     /// @dev Hot fields (collateral/debt) grouped; the packed rate/interest
     ///      group is 64+64+32+96 = 256 bits exactly, one slot.
     struct VaultStorage {
-        mapping(address => uint256) collateral;   // user => collateral (WAD)
-        mapping(address => uint256) debt;          // user => debt (WAD)
+        mapping(address => uint256) collateral; // user => collateral (WAD)
+        mapping(address => uint256) debt; // user => debt (WAD)
         uint64 collateralFactorBps;
         uint64 reserveFactorBps;
         uint32 lastUpdate;
-        uint96 pendingInterest;                    // 64+64+32+96 = 256 bits ✓
+        uint96 pendingInterest; // 64+64+32+96 = 256 bits ✓
         bool paused;
     }
 
     /// @notice Meridian oracle feed state — layout PROVISIONAL until Ch 22.
     struct OracleStorage {
-        mapping(address => address) primaryFeed;  // asset => Chainlink feed
-        mapping(address => uint32) twapWindow;    // asset => TWAP window (s)
-        uint64 maxStaleness;                      // max feed age before fallback
+        mapping(address => address) primaryFeed; // asset => Chainlink feed
+        mapping(address => uint32) twapWindow; // asset => TWAP window (s)
+        uint64 maxStaleness; // max feed age before fallback
         bool fallbackEnabled;
     }
 

@@ -53,7 +53,11 @@ contract ArithProbe is IArithProbe {
     // ── mulDiv ───────────────────────────────────────────────────────────────
 
     /// @inheritdoc IArithProbe
-    function mulDiv(uint256 a, uint256 b, uint256 denominator) public pure returns (uint256 result) {
+    function mulDiv(uint256 a, uint256 b, uint256 denominator)
+        public
+        pure
+        returns (uint256 result)
+    {
         if (denominator == 0) _panic(PANIC_DIVISION_BY_ZERO);
         unchecked {
             // 512-bit product [prod1 prod0] = a · b
@@ -120,15 +124,23 @@ contract ArithProbe is IArithProbe {
         return amount / 10 ** (18 - decimals);
     }
 
-    // ── per-second accrual (locked: linear + r²/2 borrower-favorable bias) ───
+    // ── per-second accrual (locked: linear + r²/2 compounding premium) ───────
 
     /// @inheritdoc IArithProbe
-    function accrueLinear(uint256 ratePerSecond, uint256 secondsElapsed) public pure returns (uint256) {
+    function accrueLinear(uint256 ratePerSecond, uint256 secondsElapsed)
+        public
+        pure
+        returns (uint256)
+    {
         return mulDiv(ratePerSecond, secondsElapsed, 1);
     }
 
     /// @inheritdoc IArithProbe
-    function accrueQuadratic(uint256 ratePerSecond, uint256 secondsElapsed) public pure returns (uint256) {
+    function accrueQuadratic(uint256 ratePerSecond, uint256 secondsElapsed)
+        public
+        pure
+        returns (uint256)
+    {
         uint256 rt = accrueLinear(ratePerSecond, secondsElapsed);
         // (r·t)² / (2·RAY) — RAY-scaled quadratic term.
         return mulDiv(rt, rt, 2 * RAY);
@@ -136,7 +148,8 @@ contract ArithProbe is IArithProbe {
 
     /// @inheritdoc IArithProbe
     function accrue(uint256 ratePerSecond, uint256 secondsElapsed) public pure returns (uint256) {
-        return accrueLinear(ratePerSecond, secondsElapsed) + accrueQuadratic(ratePerSecond, secondsElapsed);
+        return accrueLinear(ratePerSecond, secondsElapsed)
+            + accrueQuadratic(ratePerSecond, secondsElapsed);
     }
 
     // ── internals ────────────────────────────────────────────────────────────

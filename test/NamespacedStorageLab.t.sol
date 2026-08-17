@@ -11,8 +11,7 @@ contract NamespacedStorageLabTest is Test {
     function testNamespaceFormula(string calldata id) public {
         bytes32 ns = NamespacedStorageLab.namespace(id);
         bytes32 expected = bytes32(
-            (uint256(keccak256(abi.encode(uint256(keccak256(bytes(id))) - 1))))
-            & ~uint256(0xff)
+            (uint256(keccak256(abi.encode(uint256(keccak256(bytes(id))) - 1)))) & ~uint256(0xff)
         );
         assertEq(ns, expected, "namespace must match ERC-7201 construction");
     }

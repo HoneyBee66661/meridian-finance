@@ -51,7 +51,9 @@ contract MeridianToken is ERC20, ERC20Burnable, ERC20Permit, AccessControl, IMer
         address initialRecipient,
         uint256 initialSupply
     ) ERC20("Meridian Token", "MER") ERC20Permit("Meridian Token") {
-        if (defaultAdmin == address(0)) revert InvalidConstructorAddress(defaultAdmin);
+        if (defaultAdmin == address(0)) {
+            revert InvalidConstructorAddress(defaultAdmin);
+        }
         if (minter == address(0)) revert InvalidConstructorAddress(minter);
         if (initialRecipient == address(0)) revert InvalidConstructorAddress(initialRecipient);
 
@@ -74,7 +76,12 @@ contract MeridianToken is ERC20, ERC20Burnable, ERC20Permit, AccessControl, IMer
     ///      IERC20Permit path); `Nonces` is already covered by ERC20Permit's
     ///      own override and must NOT be listed (compiler errors 4327/2353
     ///      otherwise; pinned as a Ch 14 finding).
-    function nonces(address owner) public view override(ERC20Permit, IERC20Permit) returns (uint256) {
+    function nonces(address owner)
+        public
+        view
+        override(ERC20Permit, IERC20Permit)
+        returns (uint256)
+    {
         return super.nonces(owner);
     }
 }

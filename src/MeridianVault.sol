@@ -21,9 +21,12 @@ import {IInterestRateModel} from "./IInterestRateModel.sol";
 /// @dev Design decisions locked in Ch 20:
 ///      - **Isolation**: no cross-market state, so a correlated-collateral
 ///        crash in one market cannot drain another (the 2026 contagion class).
-///      - **Health factor** = `collateralValue * CF / debtValue`, WAD. Must stay
-///        > 1; borrow/withdraw enforce the hard line; `liquidationThreshold`
-///        (> 1) defines the buffer zone where Ch 24 liquidations activate.
+///      - **Health factor** = `collateralValue * LT / debtValue`, WAD. Must stay
+///        ≥ 1; borrow/withdraw enforce the hard line; a position is liquidatable
+///        when HF < 1, i.e. debt exceeds `LT * collateralValue`.
+///        `liquidationThreshold` (WAD, e.g. 0.8e18) sits strictly above the
+///        collateral factor — the safety buffer where Ch 24 liquidations
+///        activate while the position is still solvent.
 ///      - **Accounting in token-native units**; WAD only for the borrow index,
 ///        rates, and prices. Per-user debt is the Compound-style
 ///        `principal * index / interestIndex` snapshot, so accrual is O(1) per
@@ -46,8 +49,8 @@ contract MeridianVault is IMeridianVault, AccessControl {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    /// @dev One WAD == 1e18. The health-factor hard line and liquidation
-    ///      threshold share this axis.
+    /// @dev One WAD == 1e18. The health-factor axis: HF is liquidatable below
+    ///      1e18; the liquidation threshold is a WAD fraction (<= 1e18).
     uint256 private constant WAD = 1e18;
 
     /// @dev Basis points denominator.
@@ -63,7 +66,7 @@ contract MeridianVault is IMeridianVault, AccessControl {
 
     // ---- Market parameters (governance-settable) ----
     uint64 internal _collateralFactorBps; // borrow capacity factor, e.g. 7500
-    uint256 internal _liquidationThreshold; // WAD, strictly > 1e18
+    uint256 internal _liquidationThreshold; // WAD <= 1e18, strictly > CF, e.g. 0.8e18
     uint64 internal _liquidationIncentiveBps; // e.g. 1000 (10% bonus)
     uint64 internal _reserveFactorBps; // protocol share of interest, e.g. 2000
     IMeridianOracle internal _oracle;
@@ -87,7 +90,9 @@ contract MeridianVault is IMeridianVault, AccessControl {
     /// @param oracle_ The oracle pricing both assets (IMeridianOracle).
     /// @param interestRateModel_ The rate model (IInterestRateModel).
     /// @param collateralFactorBps_ Borrow capacity factor (<= 100%).
-    /// @param liquidationThreshold_ HF cutoff for liquidations, WAD, > 1e18.
+    /// @param liquidationThreshold_ Liquidation threshold, WAD (<= 1e18) and
+    ///        strictly above the collateral factor; liquidations begin when
+    ///        debt exceeds `LT * collateralValue` (HF < 1).
     /// @param liquidationIncentiveBps_ Bonus on seized collateral, non-zero.
     /// @param reserveFactorBps_ Protocol share of interest (<= 100%).
     constructor(
@@ -101,15 +106,27 @@ contract MeridianVault is IMeridianVault, AccessControl {
         uint64 reserveFactorBps_
     ) {
         if (collateralToken_ == address(0) || debtToken_ == address(0)) {
-            revert InvalidConstructorAddress(collateralToken_ == address(0) ? collateralToken_ : debtToken_);
+            revert InvalidConstructorAddress(collateralToken_ == address(0)
+                    ? collateralToken_
+                    : debtToken_);
         }
         if (address(oracle_) == address(0)) revert InvalidConstructorAddress(address(oracle_));
         if (address(interestRateModel_) == address(0)) {
             revert InvalidConstructorAddress(address(interestRateModel_));
         }
         if (collateralFactorBps_ > BPS) revert InvalidCollateralFactor(collateralFactorBps_);
-        if (liquidationThreshold_ <= WAD) revert InvalidLiquidationThreshold(liquidationThreshold_);
-        if (liquidationIncentiveBps_ == 0) revert InvalidLiquidationIncentive(liquidationIncentiveBps_);
+        // LT is a WAD fraction of collateral value: at most 1e18, and strictly
+        // above the collateral factor or the safety buffer vanishes (LT == CF
+        // would put max-borrow positions at HF == 1, on the liquidation line).
+        if (
+            liquidationThreshold_ > WAD
+                || liquidationThreshold_ * BPS <= uint256(collateralFactorBps_) * WAD
+        ) {
+            revert InvalidLiquidationThreshold(liquidationThreshold_);
+        }
+        if (liquidationIncentiveBps_ == 0) {
+            revert InvalidLiquidationIncentive(liquidationIncentiveBps_);
+        }
         if (reserveFactorBps_ > BPS) revert InvalidReserveFactor(reserveFactorBps_);
 
         collateralToken = collateralToken_;
@@ -197,8 +214,9 @@ contract MeridianVault is IMeridianVault, AccessControl {
 
     /// @inheritdoc IMeridianVault
     function borrowCapacity(address user) public view override returns (uint256) {
-        uint256 collValue =
-            _collateralOf[user].mulDiv(_oracle.getPrice(collateralToken), 10 ** _collateralDecimals);
+        uint256 collValue = _collateralOf[user].mulDiv(
+            _oracle.getPrice(collateralToken), 10 ** _collateralDecimals
+        );
         uint256 capacityBase = collValue.mulDiv(_collateralFactorBps, BPS);
         return capacityBase.mulDiv(10 ** _debtDecimals, _oracle.getPrice(debtToken));
     }
@@ -212,7 +230,7 @@ contract MeridianVault is IMeridianVault, AccessControl {
 
     /// @inheritdoc IMeridianVault
     function isLiquidatable(address user) external view override returns (bool) {
-        return healthFactor(user) < _liquidationThreshold;
+        return healthFactor(user) < WAD;
     }
 
     // ---- User actions ---------------------------------------------------------
@@ -307,7 +325,11 @@ contract MeridianVault is IMeridianVault, AccessControl {
     }
 
     /// @inheritdoc IMeridianVault
-    function withdrawExcessLiquidity(uint256 amount) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function withdrawExcessLiquidity(uint256 amount)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         if (amount == 0) revert ZeroAmount();
         uint256 idle = _idleCash();
         if (amount > idle) revert ExcessiveWithdrawal(amount, idle);
@@ -316,35 +338,76 @@ contract MeridianVault is IMeridianVault, AccessControl {
     }
 
     /// @inheritdoc IMeridianVault
-    function setCollateralFactor(uint64 collateralFactorBps_) external override onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (collateralFactorBps_ > BPS) revert InvalidCollateralFactor(collateralFactorBps_);
+    function setCollateralFactor(uint64 collateralFactorBps_)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (collateralFactorBps_ > BPS) {
+            revert InvalidCollateralFactor(collateralFactorBps_);
+        }
+        // Ch 39 audit finding: the constructor validates the safety buffer
+        // (LT * BPS > CF * WAD — liquidation threshold strictly above the
+        // collateral factor), but this setter did NOT, so governance could
+        // raise CF to or above LT and silently erase the buffer: a max-borrow
+        // position would then sit at HF <= 1 (liquidatable on entry). The
+        // cross-check is now identical to the constructor's, so the invariant
+        // "LT > CF" holds across the whole governance surface.
+        if (_liquidationThreshold * BPS <= uint256(collateralFactorBps_) * WAD) {
+            revert InvalidCollateralFactor(collateralFactorBps_);
+        }
         emit CollateralFactorSet(_collateralFactorBps, collateralFactorBps_);
         _collateralFactorBps = collateralFactorBps_;
     }
 
     /// @inheritdoc IMeridianVault
-    function setLiquidationThreshold(uint256 liquidationThreshold_) external override onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (liquidationThreshold_ <= WAD) revert InvalidLiquidationThreshold(liquidationThreshold_);
+    function setLiquidationThreshold(uint256 liquidationThreshold_)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // Same validation as the constructor: WAD fraction (<= 1e18), strictly
+        // above the collateral factor so the safety buffer survives.
+        if (
+            liquidationThreshold_ > WAD
+                || liquidationThreshold_ * BPS <= uint256(_collateralFactorBps) * WAD
+        ) {
+            revert InvalidLiquidationThreshold(liquidationThreshold_);
+        }
         emit LiquidationThresholdSet(_liquidationThreshold, liquidationThreshold_);
         _liquidationThreshold = liquidationThreshold_;
     }
 
     /// @inheritdoc IMeridianVault
-    function setLiquidationIncentive(uint64 liquidationIncentiveBps_) external override onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (liquidationIncentiveBps_ == 0) revert InvalidLiquidationIncentive(liquidationIncentiveBps_);
+    function setLiquidationIncentive(uint64 liquidationIncentiveBps_)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (liquidationIncentiveBps_ == 0) {
+            revert InvalidLiquidationIncentive(liquidationIncentiveBps_);
+        }
         emit LiquidationIncentiveSet(_liquidationIncentiveBps, liquidationIncentiveBps_);
         _liquidationIncentiveBps = liquidationIncentiveBps_;
     }
 
     /// @inheritdoc IMeridianVault
-    function setReserveFactor(uint64 reserveFactorBps_) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setReserveFactor(uint64 reserveFactorBps_)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         if (reserveFactorBps_ > BPS) revert InvalidReserveFactor(reserveFactorBps_);
         emit ReserveFactorSet(_reserveFactorBps, reserveFactorBps_);
         _reserveFactorBps = reserveFactorBps_;
     }
 
     /// @inheritdoc IMeridianVault
-    function setInterestRateModel(IInterestRateModel newModel) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setInterestRateModel(IInterestRateModel newModel)
+        external
+        override
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         _accrueInterest(); // lock pending interest at the old model
         if (address(newModel) == address(0)) revert InvalidConstructorAddress(address(newModel));
         emit InterestRateModelSet(_interestRateModel, newModel);
@@ -370,13 +433,20 @@ contract MeridianVault is IMeridianVault, AccessControl {
 
     /// @dev Health factor for explicit collateral, WAD, floored (conservative).
     ///      `debtValue == 0` is handled by the caller (HF = max).
-    function _healthFactor(uint256 collateralAmount, uint256 debtAmount) internal view returns (uint256) {
+    ///      HF = collateralValue * LT / debtValue — the liquidation threshold,
+    ///      not the collateral factor: at max borrow (debt = CF * collValue)
+    ///      HF = LT/CF > 1, so the maximum borrower is never liquidatable.
+    function _healthFactor(uint256 collateralAmount, uint256 debtAmount)
+        internal
+        view
+        returns (uint256)
+    {
         if (debtAmount == 0) return type(uint256).max;
         if (collateralAmount == 0) return 0;
         uint256 collValue =
             collateralAmount.mulDiv(_oracle.getPrice(collateralToken), 10 ** _collateralDecimals);
         uint256 debtValue = debtAmount.mulDiv(_oracle.getPrice(debtToken), 10 ** _debtDecimals);
-        return collValue.mulDiv(_collateralFactorBps, BPS).mulDiv(WAD, debtValue);
+        return collValue.mulDiv(_liquidationThreshold, WAD).mulDiv(WAD, debtValue);
     }
 
     /// @dev Lendable debt-token balance: total vault balance minus the protocol

@@ -52,7 +52,10 @@ contract MeridianGovernanceToken is ERC20, ERC20Permit, Votes, IMeridianGovernan
     /// @param name_ ERC-20 name; also the EIP-712 domain name (shared by permit
     ///        and delegateBySig — both hash under `Meridian Governance`).
     /// @param symbol_ ERC-20 symbol (canonical: "gMER").
-    constructor(address mer_, string memory name_, string memory symbol_) ERC20(name_, symbol_) ERC20Permit(name_) {
+    constructor(address mer_, string memory name_, string memory symbol_)
+        ERC20(name_, symbol_)
+        ERC20Permit(name_)
+    {
         if (mer_ == address(0)) revert InvalidConstructorAddress(mer_);
         mer = IERC20(mer_);
     }
@@ -92,7 +95,12 @@ contract MeridianGovernanceToken is ERC20, ERC20Permit, Votes, IMeridianGovernan
     ///      explicitly as well (error 4327 otherwise — pinned in-run; the Ch 14
     ///      "Nonces must NOT be listed" rule was specific to MER's graph, where
     ///      AccessControl did not inherit Nonces).
-    function nonces(address owner) public view override(ERC20Permit, IERC20Permit, Nonces) returns (uint256) {
+    function nonces(address owner)
+        public
+        view
+        override(ERC20Permit, IERC20Permit, Nonces)
+        returns (uint256)
+    {
         return super.nonces(owner);
     }
 
@@ -134,10 +142,12 @@ contract MeridianGovernanceToken is ERC20, ERC20Permit, Votes, IMeridianGovernan
     }
 
     /// @notice The `pos`-th checkpoint for `account` (inspection helper).
-    function checkpoints(
-        address account,
-        uint32 pos
-    ) public view virtual returns (Checkpoints.Checkpoint208 memory) {
+    function checkpoints(address account, uint32 pos)
+        public
+        view
+        virtual
+        returns (Checkpoints.Checkpoint208 memory)
+    {
         return _checkpoints(account, pos);
     }
 }

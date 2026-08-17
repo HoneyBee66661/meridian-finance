@@ -17,22 +17,25 @@ contract Counter {
 /// @notice Lab contract proving CREATE/CREATE2 address derivation.
 /// @dev Pedagogical only — NOT part of the Meridian protocol.
 contract DeployerProbe {
-
     /// @dev CREATE prediction: keccak256(rlp([sender, nonce]))[12:]
     ///      RLP: sender = 20-byte string (0x94 prefix), nonce = single byte
     ///      (< 0x80), payload 22 bytes -> list header 0xd6.
-    function predictCreate(address sender, uint256 nonce)
-        public
-        pure
-        returns (address)
-    {
+    function predictCreate(address sender, uint256 nonce) public pure returns (address) {
         require(nonce < 0x80, "predictCreate: lab supports nonce < 0x80");
-        return address(uint160(uint256(keccak256(abi.encodePacked(
-            bytes1(0xd6), // rlp list header: 22-byte payload
-            bytes1(0x94), // rlp string header: 20-byte address
-            bytes20(sender), // the address bytes
-            bytes1(uint8(nonce)) // rlp string: nonce < 0x80
-        )))));
+        return address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            bytes1(0xd6), // rlp list header: 22-byte payload
+                            bytes1(0x94), // rlp string header: 20-byte address
+                            bytes20(sender), // the address bytes
+                            bytes1(uint8(nonce)) // rlp string: nonce < 0x80
+                        )
+                    )
+                )
+            )
+        );
     }
 
     /// @dev CREATE2 prediction per EIP-1014.
@@ -41,12 +44,13 @@ contract DeployerProbe {
         pure
         returns (address)
     {
-        return address(uint160(uint256(keccak256(abi.encodePacked(
-            bytes1(0xff),
-            deployer,
-            salt,
-            keccak256(initcode)
-        )))));
+        return address(
+            uint160(
+                uint256(
+                    keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, keccak256(initcode)))
+                )
+            )
+        );
     }
 
     /// @dev Deploys with CREATE; the test predicts via vm.getNonce.
@@ -55,10 +59,7 @@ contract DeployerProbe {
     }
 
     /// @dev Deploys with CREATE2; salt is caller-chosen.
-    function deployCreate2(bytes32 salt)
-        external
-        returns (address actual, address predicted)
-    {
+    function deployCreate2(bytes32 salt) external returns (address actual, address predicted) {
         bytes memory initcode = type(Counter).creationCode;
         predicted = predictCreate2(address(this), salt, initcode);
         actual = address(new Counter{salt: salt}());

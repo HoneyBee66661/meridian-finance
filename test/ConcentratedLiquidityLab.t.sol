@@ -68,13 +68,18 @@ contract ConcentratedLiquidityLabTest is Test {
 
     // ── helpers ────────────────────────────────────────────────────────────
 
-    function _seedPosition(IConcentratedLiquidityLab p, uint128 liquiditySeed, int24 lower, int24 upper)
-        internal
-        returns (uint128 liquidity)
-    {
+    function _seedPosition(
+        IConcentratedLiquidityLab p,
+        uint128 liquiditySeed,
+        int24 lower,
+        int24 upper
+    ) internal returns (uint128 liquidity) {
         uint160 sqrtP = p.sqrtPriceX96();
         (uint256 a0, uint256 a1) = p.getAmountsForLiquidity(
-            sqrtP, TickMathLab.getSqrtRatioAtTick(lower), TickMathLab.getSqrtRatioAtTick(upper), liquiditySeed
+            sqrtP,
+            TickMathLab.getSqrtRatioAtTick(lower),
+            TickMathLab.getSqrtRatioAtTick(upper),
+            liquiditySeed
         );
         liquidity = p.mint(lower, upper, a0, a1);
     }
@@ -125,17 +130,26 @@ contract ConcentratedLiquidityLabTest is Test {
     /// @dev Round-trip monotone: liquidity derived from the amounts for L never
     ///      exceeds L (both directions floor — the conversionsNeverGain shape,
     ///      Ch 12/16 family), and is never zero.
-    function testFuzz_amounts_liquidity_neverGains(uint128 liquiditySeed, uint160 sqrtPrice, uint160 sqrtA, uint160 sqrtB)
-        public
-    {
+    function testFuzz_amounts_liquidity_neverGains(
+        uint128 liquiditySeed,
+        uint160 sqrtPrice,
+        uint160 sqrtA,
+        uint160 sqrtB
+    ) public {
         sqrtPrice = uint160(
-            bound(sqrtPrice, uint256(TickMathLab.MIN_SQRT_RATIO) + 1_000, uint256(TickMathLab.MAX_SQRT_RATIO) - 1_000)
+            bound(
+                sqrtPrice,
+                uint256(TickMathLab.MIN_SQRT_RATIO) + 1_000,
+                uint256(TickMathLab.MAX_SQRT_RATIO) - 1_000
+            )
         );
         sqrtA = uint160(bound(sqrtA, TickMathLab.MIN_SQRT_RATIO, uint256(sqrtPrice) - 1));
-        sqrtB = uint160(bound(sqrtB, uint256(sqrtPrice) + 1, uint256(TickMathLab.MAX_SQRT_RATIO) - 1));
+        sqrtB =
+            uint160(bound(sqrtB, uint256(sqrtPrice) + 1, uint256(TickMathLab.MAX_SQRT_RATIO) - 1));
         liquiditySeed = uint128(bound(liquiditySeed, 1e18, 1e22));
 
-        (uint256 a0, uint256 a1) = pool0.getAmountsForLiquidity(sqrtPrice, sqrtA, sqrtB, liquiditySeed);
+        (uint256 a0, uint256 a1) =
+            pool0.getAmountsForLiquidity(sqrtPrice, sqrtA, sqrtB, liquiditySeed);
         uint128 recovered = pool0.getLiquidityForAmounts(sqrtPrice, sqrtA, sqrtB, a0, a1);
         assertLe(recovered, liquiditySeed);
     }
@@ -235,10 +249,15 @@ contract ConcentratedLiquidityLabTest is Test {
         uint256 amountIn = 1e16;
         uint256 numerator1 = uint256(pool0.liquidity()) << 96;
         uint256 product = amountIn * before;
-        uint160 afterPrice = uint160(Math.mulDiv(numerator1, before, numerator1 + product, Math.Rounding.Ceil));
+        uint160 afterPrice =
+            uint160(Math.mulDiv(numerator1, before, numerator1 + product, Math.Rounding.Ceil));
         uint256 expectedOut = Math.mulDiv(pool0.liquidity(), before - afterPrice, Q96);
 
-        vm.expectRevert(abi.encodeWithSelector(IConcentratedLiquidityLab.SlippageExceeded.selector, expectedOut + 1, expectedOut));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IConcentratedLiquidityLab.SlippageExceeded.selector, expectedOut + 1, expectedOut
+            )
+        );
         pool0.swap(amountIn, true, expectedOut + 1, address(this));
     }
 
@@ -328,7 +347,11 @@ contract ConcentratedLiquidityLabTest is Test {
     // ── revert surface ──────────────────────────────────────────────────────
 
     function test_pool_reverts_invalidRange() public {
-        vm.expectRevert(abi.encodeWithSelector(IConcentratedLiquidityLab.InvalidTickRange.selector, UPPER, LOWER));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IConcentratedLiquidityLab.InvalidTickRange.selector, UPPER, LOWER
+            )
+        );
         pool.mint(UPPER, LOWER, 1e18, 1e18);
     }
 
@@ -350,7 +373,9 @@ contract ConcentratedLiquidityLabTest is Test {
     function test_pool_reverts_burnMoreThanHeld() public {
         _seedPosition(pool, 1e20, LOWER, UPPER);
         vm.prank(alice); // alice holds no position
-        vm.expectRevert(abi.encodeWithSelector(IConcentratedLiquidityLab.InsufficientLiquidity.selector, 0, 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(IConcentratedLiquidityLab.InsufficientLiquidity.selector, 0, 1)
+        );
         pool.burn(LOWER, UPPER, 1);
     }
 
@@ -387,7 +412,9 @@ contract ConcentratedLiquidityLabTest is Test {
         pure
         returns (uint256 a0, uint256 a1)
     {
-        return _amountsFor(p, TickMathLab.getSqrtRatioAtTick(lower), TickMathLab.getSqrtRatioAtTick(upper), L);
+        return _amountsFor(
+            p, TickMathLab.getSqrtRatioAtTick(lower), TickMathLab.getSqrtRatioAtTick(upper), L
+        );
     }
 
     function _amountsFor(uint160 p, uint160 sqrtLo, uint160 sqrtHi, uint128 L)

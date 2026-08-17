@@ -76,3 +76,35 @@ function vaultStorage() internal pure returns (VaultStorage storage $) {
 - [ ] `solc --storage-layout` diff clean (append-only)?
 - [ ] Implementation protected from direct `initialize()`?
 - [ ] Pre-initialize state of every security-relevant variable known (no Nomad-class zero-root assumptions)?
+
+## 7. Storage layout diff template (upgrade PRs — locked Ch 38)
+
+Every upgrade PR ships a storage-diff table comparing the old and new
+implementations, plus a CI gate that diffs the machine-readable layouts.
+Storage corruption is the highest-impact silent failure in upgrades — no
+revert, no event, just wrong values — so the diff is a required artifact.
+
+Generate the layouts (JSON — the CI input):
+
+```bash
+forge inspect <Contract> storage-layout
+```
+
+CI gate: dump `storage-layout` JSON for `impl_v1` and `impl_v2` (same solc
+version, same optimizer settings) and diff the two outputs; any change other
+than appended slots fails the upgrade PR before it reaches review.
+
+| Slot | Variable | Type | impl_v1 | impl_v2 | Status |
+|---|---|---|---|---|---|
+| 0 | totalAssets | uint256 | uint256 | uint256 | ✓ unchanged |
+| 1 | totalShares | uint256 | uint256 | uint256 | ✓ unchanged |
+| 2 | admin | address | address | address | ✓ unchanged |
+| 3 | (new) rewardsAdmin | address | — | address | ✓ append-only |
+
+The five rules (anything else = BLOCK UPGRADE):
+
+- ✓ unchanged: type, name, and semantic unit identical → safe
+- ✓ append-only: new slot appended after all existing slots → safe
+- ✗ reorder: any existing slot's position changes → BLOCK UPGRADE
+- ✗ retype: type changes (e.g., uint128 → uint256) → BLOCK UPGRADE (even if same slot)
+- ✗ rescale: semantic unit changes (e.g., raw → WAD) → BLOCK UPGRADE

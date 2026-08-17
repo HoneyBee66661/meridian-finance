@@ -108,7 +108,7 @@ contract FoundryProbe is IFoundryProbe {
     /// @inheritdoc IFoundryProbe
     function withdrawEth(address to, uint256 amount) external onlyOwner {
         // CEI: effects (none) then interaction; the balance check is implicit in the call.
-        (bool ok, ) = to.call{value: amount}("");
+        (bool ok,) = to.call{value: amount}("");
         if (!ok) revert TransferFailed(to, amount);
     }
 

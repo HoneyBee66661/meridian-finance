@@ -31,9 +31,7 @@ contract MeridianOracleAbiTest is Test {
         assertEq(data.length, 68);
         // reference wire format: selector + market right-aligned + secondsAgo
         bytes memory expected = abi.encodePacked(
-            IMeridianOracle.consult.selector,
-            bytes32(uint256(uint160(market))),
-            bytes32(secondsAgo)
+            IMeridianOracle.consult.selector, bytes32(uint256(uint160(market))), bytes32(secondsAgo)
         );
         assertEq(data, expected);
     }

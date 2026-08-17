@@ -75,7 +75,9 @@ contract ForkProbeTest is Test {
     // ── UNIT: time travel ──────────────────────────────────────────────────
     function testAccrualNotMature() external {
         vm.expectRevert(
-            abi.encodeWithSelector(IForkProbe.AccrualNotMature.selector, probe.lockUntil(), block.timestamp)
+            abi.encodeWithSelector(
+                IForkProbe.AccrualNotMature.selector, probe.lockUntil(), block.timestamp
+            )
         );
         probe.accrue();
     }
@@ -160,7 +162,7 @@ contract ForkProbeTest is Test {
             return;
         }
         vm.createSelectFork(rpc, PINNED_BLOCK);
-        (uint80 roundId, int256 answer, , uint256 updatedAt, uint80 answeredInRound) =
+        (uint80 roundId, int256 answer,, uint256 updatedAt, uint80 answeredInRound) =
             IChainlinkAggregator(ETH_USD_FEED).latestRoundData();
         assertGt(roundId, 0);
         assertGt(answeredInRound, 0);
@@ -181,7 +183,8 @@ contract ForkProbeTest is Test {
             return;
         }
         vm.createSelectFork(rpc, PINNED_BLOCK);
-        (bool ok, bytes memory ret) = USDT.call(abi.encodeCall(IERC20Min.approve, (address(this), 1e6)));
+        (bool ok, bytes memory ret) =
+            USDT.call(abi.encodeCall(IERC20Min.approve, (address(this), 1e6)));
         assertTrue(ok);
         assertEq(ret.length, 0); // the empty-return convention, measured on-chain
     }
@@ -222,7 +225,13 @@ interface IChainlinkAggregator {
     function latestRoundData()
         external
         view
-        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+        returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        );
 }
 
 /// @dev Minimal Uniswap v3 factory surface (owner + setOwner).

@@ -7,7 +7,9 @@ import {GasOptProbe} from "../src/GasOptProbe.sol";
 contract GasOptProbeTest is Test {
     GasOptProbe internal probe;
 
-    function setUp() public { probe = new GasOptProbe(address(0x1234)); }
+    function setUp() public {
+        probe = new GasOptProbe(address(0x1234));
+    }
 
     /// @dev Immutable read must be meaningfully cheaper than the storage twin.
     ///      Warm the probe address first — the first call in a tx pays the cold

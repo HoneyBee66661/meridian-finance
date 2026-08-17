@@ -20,15 +20,11 @@ interface IMeridianFactory {
     // ── Events ────────────────────────────────────────────────────────────
     /// @dev Emitted for every market proxy deployment.
     event MarketDeployed(
-        address indexed market,
-        address indexed implementation,
-        bytes32 indexed salt
+        address indexed market, address indexed implementation, bytes32 indexed salt
     );
 
     /// @dev Deploys a minimal-proxy market with a msg.sender-namespaced salt.
-    function deployMarket(bytes32 salt, address implementation)
-        external
-        returns (address market);
+    function deployMarket(bytes32 salt, address implementation) external returns (address market);
 
     /// @dev Pure EIP-1014 predictor. Hash is over initcode, never runtime code.
     function predictMarket(bytes32 salt, address implementation)
@@ -37,8 +33,5 @@ interface IMeridianFactory {
         returns (address market);
 
     /// @dev True iff `market` is a minimal proxy of `implementation`.
-    function verifyMarket(address market, address implementation)
-        external
-        view
-        returns (bool ok);
+    function verifyMarket(address market, address implementation) external view returns (bool ok);
 }

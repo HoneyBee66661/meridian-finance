@@ -70,7 +70,9 @@ contract YulProbeTest is Test {
     function testMcopyMatchesLoop(uint256 len) public {
         len = bound(len, 0, 8192);
         bytes memory data = new bytes(len);
-        for (uint256 i; i < len; ++i) data[i] = bytes1(uint8((i * 31) % 256));
+        for (uint256 i; i < len; ++i) {
+            data[i] = bytes1(uint8((i * 31) % 256));
+        }
         assertEq(probe.copyMcopy(data), probe.copyLoop(data));
     }
 
@@ -100,11 +102,15 @@ contract YulProbeTest is Test {
     function testAssemblyPackedReadCheaperThanFourSlots() public {
         probe.readHeaderAssembly(); // warm the probe address + slot
         uint256 g0 = gasleft();
-        for (uint256 i; i < 6; ++i) probe.readFourSlotsSolidity();
+        for (uint256 i; i < 6; ++i) {
+            probe.readFourSlotsSolidity();
+        }
         uint256 fourSlots = g0 - gasleft();
 
         uint256 g1 = gasleft();
-        for (uint256 i; i < 6; ++i) probe.readHeaderAssembly();
+        for (uint256 i; i < 6; ++i) {
+            probe.readHeaderAssembly();
+        }
         uint256 packed = g1 - gasleft();
 
         assertLt(packed, fourSlots, "packed assembly read must beat four SLOADs");
@@ -117,14 +123,20 @@ contract YulProbeTest is Test {
     ///      sides, isolating the copy method (768 gas vs 3 + expansion).
     function testMcopyCheaperThanLoop() public {
         bytes memory data = new bytes(4096);
-        for (uint256 i; i < 4096; ++i) data[i] = bytes1(uint8((i * 31) % 256));
+        for (uint256 i; i < 4096; ++i) {
+            data[i] = bytes1(uint8((i * 31) % 256));
+        }
         probe.copyMcopy(data); // warm the probe address
         uint256 g0 = gasleft();
-        for (uint256 i; i < 3; ++i) probe.copyMcopy(data);
+        for (uint256 i; i < 3; ++i) {
+            probe.copyMcopy(data);
+        }
         uint256 mc = g0 - gasleft();
 
         uint256 g1 = gasleft();
-        for (uint256 i; i < 3; ++i) probe.copyLoop(data);
+        for (uint256 i; i < 3; ++i) {
+            probe.copyLoop(data);
+        }
         uint256 lp = g1 - gasleft();
 
         assertLt(mc + 200, lp, "MCOPY must beat the mload/mstore copy loop");

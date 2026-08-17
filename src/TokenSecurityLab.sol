@@ -332,7 +332,9 @@ contract FractionalRebaseVault is ITokenSecurityLab {
     }
 
     function redeem(uint256 shareAmount) external returns (uint256 paid) {
-        if (shares[msg.sender] < shareAmount) revert InsufficientBalance(shares[msg.sender], shareAmount);
+        if (shares[msg.sender] < shareAmount) {
+            revert InsufficientBalance(shares[msg.sender], shareAmount);
+        }
         paid = shareAmount.mulDiv(totalAssets(), totalShares);
         shares[msg.sender] -= shareAmount;
         totalShares -= shareAmount;

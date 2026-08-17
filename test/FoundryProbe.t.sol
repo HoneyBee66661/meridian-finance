@@ -155,7 +155,8 @@ contract FoundryProbeTest is Test {
         vm.stopPrank();
         assertEq(probe.value(), 2);
         // After stopPrank the caller is the test contract again — revert expected.
-        bytes memory err = abi.encodeWithSelector(IFoundryProbe.NotOwner.selector, address(this), owner);
+        bytes memory err =
+            abi.encodeWithSelector(IFoundryProbe.NotOwner.selector, address(this), owner);
         vm.expectRevert(err);
         probe.setValue(3);
     }

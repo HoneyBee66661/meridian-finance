@@ -49,7 +49,8 @@ contract AbiProbeTest is Test {
     function testEncodeCallPrefixIsSelector() public {
         bytes memory payload = abi.encode(uint256(1), address(0x2), hex"deadbeef");
         bytes memory data = abi.encodeCall(IAbiProbe.decodePayload, (payload));
-        bytes memory expected = abi.encodePacked(IAbiProbe.decodePayload.selector, abi.encode(payload));
+        bytes memory expected =
+            abi.encodePacked(IAbiProbe.decodePayload.selector, abi.encode(payload));
         assertEq(data, expected, "encodeCall must be selector + abi.encode(args)");
         assertEq(bytes4(data), IAbiProbe.decodePayload.selector);
         assertEq(probe.headWord(payload, 3), 4); // c length = 4 bytes
@@ -57,10 +58,7 @@ contract AbiProbeTest is Test {
 
     /// @dev The canonical packed-encoding ambiguity: two words == one word.
     function testPackedHash16Equals32() public {
-        assertEq(
-            probe.packedHash16(0x1234, 0x5678),
-            probe.packedHash32(0x12345678)
-        );
+        assertEq(probe.packedHash16(0x1234, 0x5678), probe.packedHash32(0x12345678));
     }
 
     /// @dev Fuzz: every (uint8, uint8) pair collides with the packed uint16.
@@ -74,7 +72,9 @@ contract AbiProbeTest is Test {
     function testDecodePaddingNotValidated() public {
         bytes memory payload = abi.encode(uint256(1), address(0x2), bytes("meridian"));
         bytes memory truncated = new bytes(payload.length - 24); // drop c's padding
-        for (uint256 i; i < truncated.length; ++i) truncated[i] = payload[i];
+        for (uint256 i; i < truncated.length; ++i) {
+            truncated[i] = payload[i];
+        }
 
         (uint256 a, address b, bytes memory c) = probe.decodePayload(truncated);
         assertEq(a, 1);
@@ -86,7 +86,9 @@ contract AbiProbeTest is Test {
     function testDecodeTruncatedPayloadRevertsEmpty() public {
         bytes memory payload = abi.encode(uint256(1), address(0x2), bytes("meridian"));
         bytes memory truncated = new bytes(payload.length - 40);
-        for (uint256 i; i < truncated.length; ++i) truncated[i] = payload[i];
+        for (uint256 i; i < truncated.length; ++i) {
+            truncated[i] = payload[i];
+        }
 
         vm.expectRevert(bytes(""));
         probe.decodePayload(truncated);
@@ -115,7 +117,9 @@ contract AbiProbeTest is Test {
     ///      17,619 vs 18,178 for 64 words). Loop-amplified min-delta.
     function test_CalldataCheaperThanCopy() public {
         uint256[] memory arr = new uint256[](64);
-        for (uint256 i; i < 64; ++i) arr[i] = i;
+        for (uint256 i; i < 64; ++i) {
+            arr[i] = i;
+        }
 
         uint256 bestCalldata = type(uint256).max;
         uint256 bestCopy = type(uint256).max;
