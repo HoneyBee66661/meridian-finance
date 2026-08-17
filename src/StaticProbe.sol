@@ -62,7 +62,9 @@ contract StaticProbe {
     /// @notice Withdraw. FINDING: `transfer` return unchecked (same detectors).
     ///         The fixed twin is `withdrawChecked`.
     function withdraw(uint256 amount) external {
-        if (balances[msg.sender] < amount) revert InsufficientBalance(balances[msg.sender], amount);
+        if (balances[msg.sender] < amount) {
+            revert InsufficientBalance(balances[msg.sender], amount);
+        }
         balances[msg.sender] -= amount;
         token.transfer(msg.sender, amount);
         emit Withdrawn(msg.sender, amount);
@@ -71,7 +73,9 @@ contract StaticProbe {
     /// @notice The fixed twin: canonical returndata capture (Ch 9) — rds == 0 is
     ///         success (USDT convention), rds != 32 reverts, else decode the bool.
     function withdrawChecked(uint256 amount) external {
-        if (balances[msg.sender] < amount) revert InsufficientBalance(balances[msg.sender], amount);
+        if (balances[msg.sender] < amount) {
+            revert InsufficientBalance(balances[msg.sender], amount);
+        }
         balances[msg.sender] -= amount;
         _safeTransfer(msg.sender, amount);
         emit Withdrawn(msg.sender, amount);
@@ -90,7 +94,8 @@ contract StaticProbe {
     }
 
     function _safeTransfer(address to, uint256 amount) internal {
-        (bool ok, bytes memory data) = address(token).call(abi.encodeCall(IERC20.transfer, (to, amount)));
+        (bool ok, bytes memory data) =
+            address(token).call(abi.encodeCall(IERC20.transfer, (to, amount)));
         if (!ok || (data.length != 0 && (data.length != 32 || !abi.decode(data, (bool))))) {
             revert TransferFailed();
         }

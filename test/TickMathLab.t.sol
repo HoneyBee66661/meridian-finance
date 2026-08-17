@@ -131,24 +131,36 @@ contract TickMathLabTest is Test {
     }
 
     function test_tickMath_reverts_aboveMaxTick() public {
-        vm.expectRevert(abi.encodeWithSelector(TickMathLab.InvalidTick.selector, TickMathLab.MAX_TICK + 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(TickMathLab.InvalidTick.selector, TickMathLab.MAX_TICK + 1)
+        );
         harness.getSqrtRatioAtTick(TickMathLab.MAX_TICK + 1);
     }
 
     function test_tickMath_reverts_belowMinTick() public {
-        vm.expectRevert(abi.encodeWithSelector(TickMathLab.InvalidTick.selector, TickMathLab.MIN_TICK - 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(TickMathLab.InvalidTick.selector, TickMathLab.MIN_TICK - 1)
+        );
         harness.getSqrtRatioAtTick(TickMathLab.MIN_TICK - 1);
     }
 
     function test_tickMath_reverts_ratioBelowMin() public {
-        vm.expectRevert(abi.encodeWithSelector(TickMathLab.InvalidSqrtRatio.selector, TickMathLab.MIN_SQRT_RATIO - 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TickMathLab.InvalidSqrtRatio.selector, TickMathLab.MIN_SQRT_RATIO - 1
+            )
+        );
         harness.getTickAtSqrtRatio(TickMathLab.MIN_SQRT_RATIO - 1);
     }
 
     /// @dev The max ratio is EXCLUSIVE: the price can never reach the max tick's
     ///      ratio (that would be 2^128 exactly).
     function test_tickMath_reverts_ratioAtOrAboveMax() public {
-        vm.expectRevert(abi.encodeWithSelector(TickMathLab.InvalidSqrtRatio.selector, TickMathLab.MAX_SQRT_RATIO));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TickMathLab.InvalidSqrtRatio.selector, TickMathLab.MAX_SQRT_RATIO
+            )
+        );
         harness.getTickAtSqrtRatio(TickMathLab.MAX_SQRT_RATIO);
     }
 

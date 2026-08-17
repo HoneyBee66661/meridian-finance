@@ -51,8 +51,8 @@ contract MeridianTokenInvariantTest is Test {
     /// @dev Sum of ALL holders must equal totalSupply — no value appears or
     ///      disappears through any op sequence.
     function invariant_holdersSumEqualsTotalSupply() public view {
-        uint256 sum = token.balanceOf(address(handler)) + token.balanceOf(user0) + token.balanceOf(user1)
-            + token.balanceOf(user2);
+        uint256 sum = token.balanceOf(address(handler)) + token.balanceOf(user0)
+            + token.balanceOf(user1) + token.balanceOf(user2);
         assertEq(sum, token.totalSupply(), "holder sum != totalSupply");
     }
 }

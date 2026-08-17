@@ -75,11 +75,7 @@ contract MockOracle is IMeridianOracle {
         return priceOf[asset];
     }
 
-    function latestRoundData()
-        external
-        pure
-        returns (uint80, int256, uint256, uint256, uint80)
-    {
+    function latestRoundData() external pure returns (uint80, int256, uint256, uint256, uint80) {
         return (0, 0, 0, 0, 0);
     }
 

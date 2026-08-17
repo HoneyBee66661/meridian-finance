@@ -63,8 +63,8 @@ contract MeridianFactory is IMeridianFactory, Ownable {
         // runtime with `implementation` embedded. Compare codehash, never
         // just `code.length > 0` — the address existing says nothing about
         // whose code is there (Ch 5 counterfactual-trust rule).
-        return market.codehash == keccak256(
-            abi.encodePacked(PROXY_PREFIX, implementation, PROXY_SUFFIX)
-        );
+        return
+            market.codehash
+                == keccak256(abi.encodePacked(PROXY_PREFIX, implementation, PROXY_SUFFIX));
     }
 }

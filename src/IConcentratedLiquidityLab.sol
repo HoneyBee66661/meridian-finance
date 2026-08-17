@@ -53,7 +53,9 @@ interface IConcentratedLiquidityLab {
         uint256 amount1
     );
     /// @notice Emitted when tokensOwed are paid out.
-    event Collect(address indexed owner, int24 tickLower, int24 tickUpper, uint256 amount0, uint256 amount1);
+    event Collect(
+        address indexed owner, int24 tickLower, int24 tickUpper, uint256 amount0, uint256 amount1
+    );
 
     // ── state-changing ───────────────────────────────────────────────────────
 

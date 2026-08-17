@@ -46,9 +46,8 @@ contract ErrorProbeTest is Test {
     ///      alone can't be expected via vm.expectRevert — assert the shape
     ///      with a low-level call instead.
     function test_RevertShape_CustomSelector() public {
-        (bool ok, bytes memory ret) = address(probe).call(
-            abi.encodeWithSelector(IErrorProbe.probe.selector, BOUND + 1)
-        );
+        (bool ok, bytes memory ret) =
+            address(probe).call(abi.encodeWithSelector(IErrorProbe.probe.selector, BOUND + 1));
         assertFalse(ok);
         assertEq(bytes4(ret), IErrorProbe.AboveBound.selector);
         assertEq(ret.length, 4 + 64); // selector + bound + received
@@ -89,12 +88,10 @@ contract ErrorProbeTest is Test {
     ///      (100 B for a 29-char message) — the measure that survives
     ///      compiler drift.
     function test_RevertData_CustomShorterThanLegacy() public {
-        (bool ok1, bytes memory ret1) = address(probe).call(
-            abi.encodeWithSelector(IErrorProbe.probe.selector, BOUND + 1)
-        );
-        (bool ok2, bytes memory ret2) = address(legacy).call(
-            abi.encodeWithSelector(IErrorProbe.probe.selector, BOUND + 1)
-        );
+        (bool ok1, bytes memory ret1) =
+            address(probe).call(abi.encodeWithSelector(IErrorProbe.probe.selector, BOUND + 1));
+        (bool ok2, bytes memory ret2) =
+            address(legacy).call(abi.encodeWithSelector(IErrorProbe.probe.selector, BOUND + 1));
         assertFalse(ok1);
         assertFalse(ok2);
         assertLt(ret1.length, ret2.length, "custom revert data must be shorter");

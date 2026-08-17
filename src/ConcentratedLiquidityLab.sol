@@ -105,7 +105,10 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
     /// @inheritdoc IConcentratedLiquidityLab
     function initialize(uint160 sqrtPriceX96_) external {
         if (sqrtPriceX96 != 0) revert NotAuthorized(msg.sender); // set-once guard
-        if (sqrtPriceX96_ < TickMathLab.MIN_SQRT_RATIO || sqrtPriceX96_ >= TickMathLab.MAX_SQRT_RATIO) {
+        if (
+            sqrtPriceX96_ < TickMathLab.MIN_SQRT_RATIO
+                || sqrtPriceX96_ >= TickMathLab.MAX_SQRT_RATIO
+        ) {
             revert InvalidSqrtRatio(sqrtPriceX96_);
         }
         sqrtPriceX96 = sqrtPriceX96_;
@@ -125,15 +128,20 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         if (amount0 == 0 && amount1 == 0) revert ZeroAmount();
 
         liquidityAmount = getLiquidityForAmounts(
-            sqrtPriceX96, TickMathLab.getSqrtRatioAtTick(tickLower), TickMathLab.getSqrtRatioAtTick(tickUpper),
-            amount0, amount1
+            sqrtPriceX96,
+            TickMathLab.getSqrtRatioAtTick(tickLower),
+            TickMathLab.getSqrtRatioAtTick(tickUpper),
+            amount0,
+            amount1
         );
         if (liquidityAmount == 0) revert ZeroAmount();
 
         _updatePosition(msg.sender, tickLower, tickUpper, int128(liquidityAmount));
 
         (uint256 need0, uint256 need1) = getAmountsForLiquidity(
-            sqrtPriceX96, TickMathLab.getSqrtRatioAtTick(tickLower), TickMathLab.getSqrtRatioAtTick(tickUpper),
+            sqrtPriceX96,
+            TickMathLab.getSqrtRatioAtTick(tickLower),
+            TickMathLab.getSqrtRatioAtTick(tickUpper),
             liquidityAmount
         );
         if (need0 > 0) _token0.safeTransferFrom(msg.sender, address(this), need0);
@@ -153,7 +161,9 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         _updatePosition(msg.sender, tickLower, tickUpper, -int128(liquidityToRemove));
 
         (uint256 amount0, uint256 amount1) = getAmountsForLiquidity(
-            sqrtPriceX96, TickMathLab.getSqrtRatioAtTick(tickLower), TickMathLab.getSqrtRatioAtTick(tickUpper),
+            sqrtPriceX96,
+            TickMathLab.getSqrtRatioAtTick(tickLower),
+            TickMathLab.getSqrtRatioAtTick(tickUpper),
             liquidityToRemove
         );
         _positions[key].tokensOwed0 += uint128(amount0);
@@ -201,19 +211,26 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
             // test setup leaves a pathological gap.
             if (++iterations > 1024) revert MaxTickWalk();
 
-            (int24 nextTick, bool initialized) = _nextInitializedTickWithinOneWord(state.tick, zeroForOne);
+            (int24 nextTick, bool initialized) =
+                _nextInitializedTickWithinOneWord(state.tick, zeroForOne);
             if (nextTick < TickMathLab.MIN_TICK) nextTick = TickMathLab.MIN_TICK;
             else if (nextTick > TickMathLab.MAX_TICK) nextTick = TickMathLab.MAX_TICK;
 
             uint160 sqrtPriceNextTarget = nextTick == TickMathLab.MIN_TICK
                 ? TickMathLab.MIN_SQRT_RATIO
-                : nextTick == TickMathLab.MAX_TICK ? TickMathLab.MAX_SQRT_RATIO : TickMathLab.getSqrtRatioAtTick(nextTick);
+                : nextTick == TickMathLab.MAX_TICK
+                    ? TickMathLab.MAX_SQRT_RATIO
+                    : TickMathLab.getSqrtRatioAtTick(nextTick);
 
             if (state.sqrtPrice == sqrtPriceNextTarget) break; // already at a boundary
 
             // Swap-math per tick (v3 SwapMath.computeSwapStep, exact-input only).
             StepComputation memory step = _computeSwapStep(
-                state.sqrtPrice, sqrtPriceNextTarget, state.activeLiquidity, state.grossRemaining, zeroForOne
+                state.sqrtPrice,
+                sqrtPriceNextTarget,
+                state.activeLiquidity,
+                state.grossRemaining,
+                zeroForOne
             );
 
             state.amountOutAccum += step.amountOut;
@@ -240,7 +257,8 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
                 if (initialized) {
                     int128 liquidityNet = _crossTick(nextTick);
                     if (zeroForOne) liquidityNet = -liquidityNet;
-                    state.activeLiquidity = uint128(int128(int256(uint256(state.activeLiquidity)) + liquidityNet));
+                    state.activeLiquidity =
+                        uint128(int128(int256(uint256(state.activeLiquidity)) + liquidityNet));
                 }
                 // v3 crossing convention: moving left, the current tick is one
                 // below the crossed tick.
@@ -256,7 +274,9 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
             }
         }
 
-        if (state.amountOutAccum < amountOutMin) revert SlippageExceeded(amountOutMin, state.amountOutAccum);
+        if (state.amountOutAccum < amountOutMin) {
+            revert SlippageExceeded(amountOutMin, state.amountOutAccum);
+        }
 
         // CEI: state is fully updated before the token transfers.
         sqrtPriceX96 = state.sqrtPrice;
@@ -293,7 +313,9 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         uint160 sqrtRatioBX96,
         uint128 liquidity_
     ) public pure returns (uint256 amount0, uint256 amount1) {
-        if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        }
         if (sqrtPriceX96_ <= sqrtRatioAX96) {
             // Price below the range: 100% token0.
             amount0 = _getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, liquidity_);
@@ -315,7 +337,9 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         uint256 amount0,
         uint256 amount1
     ) public pure returns (uint128 liquidity_) {
-        if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        }
         if (sqrtPriceX96_ <= sqrtRatioAX96) {
             liquidity_ = _getLiquidityForAmount0(sqrtRatioAX96, sqrtRatioBX96, amount0);
         } else if (sqrtPriceX96_ < sqrtRatioBX96) {
@@ -333,7 +357,9 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         view
         returns (uint256 feeGrowthInside0, uint256 feeGrowthInside1)
     {
-        return _getFeeGrowthInside(tickLower, tickUpper, tickCurrent, feeGrowthGlobal0, feeGrowthGlobal1);
+        return _getFeeGrowthInside(
+            tickLower, tickUpper, tickCurrent, feeGrowthGlobal0, feeGrowthGlobal1
+        );
     }
 
     /// @inheritdoc IConcentratedLiquidityLab
@@ -349,7 +375,14 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         )
     {
         PositionInfo storage p = _positions[_positionKey(owner, tickLower, tickUpper)];
-        return (p.liquidity, p.feeGrowthInside0Last, p.feeGrowthInside1Last, p.tokensOwed0, p.tokensOwed1);
+        return
+            (
+                p.liquidity,
+                p.feeGrowthInside0Last,
+                p.feeGrowthInside1Last,
+                p.tokensOwed0,
+                p.tokensOwed1
+            );
     }
 
     /// @inheritdoc IConcentratedLiquidityLab
@@ -365,20 +398,32 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         )
     {
         TickInfo storage info = _tickInfo[t];
-        return (info.liquidityGross, info.liquidityNet, info.feeGrowthOutside0, info.feeGrowthOutside1, info.initialized);
+        return (
+            info.liquidityGross,
+            info.liquidityNet,
+            info.feeGrowthOutside0,
+            info.feeGrowthOutside1,
+            info.initialized
+        );
     }
 
     // ── position / tick plumbing ─────────────────────────────────────────────
 
     /// @dev v3 Position.get: positions keyed by (owner, lower, upper).
-    function _positionKey(address owner, int24 tickLower, int24 tickUpper) internal pure returns (bytes32) {
+    function _positionKey(address owner, int24 tickLower, int24 tickUpper)
+        internal
+        pure
+        returns (bytes32)
+    {
         return keccak256(abi.encodePacked(owner, tickLower, tickUpper));
     }
 
     /// @dev v3 _updatePosition + _modifyPosition: update the tick table, accrue
     ///      owed fees from the inside/outside decomposition, and adjust the
     ///      pool's active liquidity if the current tick is inside the range.
-    function _updatePosition(address owner, int24 tickLower, int24 tickUpper, int128 liquidityDelta) internal {
+    function _updatePosition(address owner, int24 tickLower, int24 tickUpper, int128 liquidityDelta)
+        internal
+    {
         PositionInfo storage position = _positions[_positionKey(owner, tickLower, tickUpper)];
 
         bool flippedLower;
@@ -390,18 +435,22 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
             if (flippedUpper) _flipTick(tickUpper);
         }
 
-        (uint256 inside0, uint256 inside1) = _getFeeGrowthInside(tickLower, tickUpper, tick, feeGrowthGlobal0, feeGrowthGlobal1);
+        (uint256 inside0, uint256 inside1) =
+            _getFeeGrowthInside(tickLower, tickUpper, tick, feeGrowthGlobal0, feeGrowthGlobal1);
 
         // Position.update: accrue liquidity · (inside − insideLast) to owed fees.
-        uint128 tokensOwed0 = uint128(Math.mulDiv(inside0 - position.feeGrowthInside0Last, position.liquidity, Q128));
-        uint128 tokensOwed1 = uint128(Math.mulDiv(inside1 - position.feeGrowthInside1Last, position.liquidity, Q128));
+        uint128 tokensOwed0 =
+            uint128(Math.mulDiv(inside0 - position.feeGrowthInside0Last, position.liquidity, Q128));
+        uint128 tokensOwed1 =
+            uint128(Math.mulDiv(inside1 - position.feeGrowthInside1Last, position.liquidity, Q128));
         position.feeGrowthInside0Last = inside0;
         position.feeGrowthInside1Last = inside1;
         if (tokensOwed0 > 0) position.tokensOwed0 += tokensOwed0;
         if (tokensOwed1 > 0) position.tokensOwed1 += tokensOwed1;
 
         if (liquidityDelta != 0) {
-            position.liquidity = uint128(int128(int256(uint256(position.liquidity)) + liquidityDelta));
+            position.liquidity =
+                uint128(int128(int256(uint256(position.liquidity)) + liquidityDelta));
             // _modifyPosition: active liquidity changes only when the price is
             // currently inside the range [lower, upper).
             if (tick >= tickLower && tick < tickUpper) {
@@ -413,7 +462,10 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
     /// @dev v3 Tick.update: set liquidityNet/Gross, and on first initialization
     ///      assume all prior growth was BELOW the tick if it is at-or-below the
     ///      current tick.
-    function _updateTick(int24 t, int128 liquidityDelta, bool upper) internal returns (bool flipped) {
+    function _updateTick(int24 t, int128 liquidityDelta, bool upper)
+        internal
+        returns (bool flipped)
+    {
         TickInfo storage info = _tickInfo[t];
         uint128 grossBefore = info.liquidityGross;
         uint128 grossAfter = uint128(int128(int256(uint256(grossBefore)) + liquidityDelta));
@@ -427,9 +479,8 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         }
         info.liquidityGross = grossAfter;
         // Crossing left-to-right: lower ticks add, upper ticks remove liquidity.
-        info.liquidityNet = upper
-            ? info.liquidityNet - liquidityDelta
-            : info.liquidityNet + liquidityDelta;
+        info.liquidityNet =
+            upper ? info.liquidityNet - liquidityDelta : info.liquidityNet + liquidityDelta;
     }
 
     /// @dev v3 Tick.cross: flip the outside accumulators and return liquidityNet.
@@ -551,23 +602,28 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
 
     /// @dev v3 LiquidityAmounts.getAmount0ForLiquidity:
     ///      amount0 = L·2^96·(sqrtB − sqrtA)/(sqrtA·sqrtB).
-    function _getAmount0ForLiquidity(uint160 sqrtRatioAX96, uint160 sqrtRatioBX96, uint128 liquidity_)
-        internal
-        pure
-        returns (uint256 amount0)
-    {
-        if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
-        return Math.mulDiv(uint256(liquidity_) << 96, sqrtRatioBX96 - sqrtRatioAX96, sqrtRatioBX96) / sqrtRatioAX96;
+    function _getAmount0ForLiquidity(
+        uint160 sqrtRatioAX96,
+        uint160 sqrtRatioBX96,
+        uint128 liquidity_
+    ) internal pure returns (uint256 amount0) {
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        }
+        return Math.mulDiv(uint256(liquidity_) << 96, sqrtRatioBX96 - sqrtRatioAX96, sqrtRatioBX96)
+            / sqrtRatioAX96;
     }
 
     /// @dev v3 LiquidityAmounts.getAmount1ForLiquidity:
     ///      amount1 = L·(sqrtB − sqrtA)/2^96.
-    function _getAmount1ForLiquidity(uint160 sqrtRatioAX96, uint160 sqrtRatioBX96, uint128 liquidity_)
-        internal
-        pure
-        returns (uint256 amount1)
-    {
-        if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+    function _getAmount1ForLiquidity(
+        uint160 sqrtRatioAX96,
+        uint160 sqrtRatioBX96,
+        uint128 liquidity_
+    ) internal pure returns (uint256 amount1) {
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        }
         return Math.mulDiv(liquidity_, sqrtRatioBX96 - sqrtRatioAX96, Q96);
     }
 
@@ -578,7 +634,9 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         pure
         returns (uint128 liquidity_)
     {
-        if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        }
         uint256 intermediate = Math.mulDiv(sqrtRatioAX96, sqrtRatioBX96, Q96);
         return uint128(Math.mulDiv(amount0, intermediate, sqrtRatioBX96 - sqrtRatioAX96));
     }
@@ -590,7 +648,9 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
         pure
         returns (uint128 liquidity_)
     {
-        if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        }
         return uint128(Math.mulDiv(amount1, Q96, sqrtRatioBX96 - sqrtRatioAX96));
     }
 
@@ -616,7 +676,9 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
             step.sqrtPriceNext = sqrtPriceTarget;
             step.feeAmount = Math.mulDiv(step.amountIn, fee, 1e6 - fee, Math.Rounding.Ceil);
         } else {
-            step.sqrtPriceNext = _getNextSqrtPriceFromInput(sqrtPriceCurrent, liquidity_, amountRemainingLessFee, zeroForOne);
+            step.sqrtPriceNext = _getNextSqrtPriceFromInput(
+                sqrtPriceCurrent, liquidity_, amountRemainingLessFee, zeroForOne
+            );
             step.amountIn = zeroForOne
                 ? _getAmount0Delta(step.sqrtPriceNext, sqrtPriceCurrent, liquidity_, true)
                 : _getAmount1Delta(sqrtPriceCurrent, step.sqrtPriceNext, liquidity_, true);
@@ -629,48 +691,59 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
     }
 
     /// @dev v3 SqrtPriceMath.getAmount0Delta with explicit rounding direction.
-    function _getAmount0Delta(uint160 sqrtRatioAX96, uint160 sqrtRatioBX96, uint128 liquidity_, bool roundUp)
-        internal
-        pure
-        returns (uint256 amount0)
-    {
-        if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+    function _getAmount0Delta(
+        uint160 sqrtRatioAX96,
+        uint160 sqrtRatioBX96,
+        uint128 liquidity_,
+        bool roundUp
+    ) internal pure returns (uint256 amount0) {
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        }
         uint256 numerator1 = uint256(liquidity_) << 96;
         uint256 numerator2 = sqrtRatioBX96 - sqrtRatioAX96;
         return roundUp
-            ? _divRoundingUp(Math.mulDiv(numerator1, numerator2, sqrtRatioBX96, Math.Rounding.Ceil), sqrtRatioAX96)
+            ? _divRoundingUp(
+                Math.mulDiv(numerator1, numerator2, sqrtRatioBX96, Math.Rounding.Ceil),
+                sqrtRatioAX96
+            )
             : Math.mulDiv(numerator1, numerator2, sqrtRatioBX96) / sqrtRatioAX96;
     }
 
     /// @dev v3 SqrtPriceMath.getAmount1Delta with explicit rounding direction.
-    function _getAmount1Delta(uint160 sqrtRatioAX96, uint160 sqrtRatioBX96, uint128 liquidity_, bool roundUp)
-        internal
-        pure
-        returns (uint256 amount1)
-    {
-        if (sqrtRatioAX96 > sqrtRatioBX96) (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+    function _getAmount1Delta(
+        uint160 sqrtRatioAX96,
+        uint160 sqrtRatioBX96,
+        uint128 liquidity_,
+        bool roundUp
+    ) internal pure returns (uint256 amount1) {
+        if (sqrtRatioAX96 > sqrtRatioBX96) {
+            (sqrtRatioAX96, sqrtRatioBX96) = (sqrtRatioBX96, sqrtRatioAX96);
+        }
         return roundUp
             ? Math.mulDiv(liquidity_, sqrtRatioBX96 - sqrtRatioAX96, Q96, Math.Rounding.Ceil)
             : Math.mulDiv(liquidity_, sqrtRatioBX96 - sqrtRatioAX96, Q96);
     }
 
     /// @dev v3 SqrtPriceMath.getNextSqrtPriceFromInput.
-    function _getNextSqrtPriceFromInput(uint160 sqrtPX96, uint128 liquidity_, uint256 amountIn, bool zeroForOne)
-        internal
-        pure
-        returns (uint160)
-    {
+    function _getNextSqrtPriceFromInput(
+        uint160 sqrtPX96,
+        uint128 liquidity_,
+        uint256 amountIn,
+        bool zeroForOne
+    ) internal pure returns (uint160) {
         return zeroForOne
             ? _getNextSqrtPriceFromAmount0RoundingUp(sqrtPX96, liquidity_, amountIn, true)
             : _getNextSqrtPriceFromAmount1RoundingDown(sqrtPX96, liquidity_, amountIn, true);
     }
 
     /// @dev v3 SqrtPriceMath.getNextSqrtPriceFromAmount0RoundingUp.
-    function _getNextSqrtPriceFromAmount0RoundingUp(uint160 sqrtPX96, uint128 liquidity_, uint256 amount, bool add)
-        internal
-        pure
-        returns (uint160)
-    {
+    function _getNextSqrtPriceFromAmount0RoundingUp(
+        uint160 sqrtPX96,
+        uint128 liquidity_,
+        uint256 amount,
+        bool add
+    ) internal pure returns (uint160) {
         if (amount == 0) return sqrtPX96;
         uint256 numerator1 = uint256(liquidity_) << 96;
         if (add) {
@@ -678,7 +751,8 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
             if (product / amount == sqrtPX96) {
                 uint256 denominator = numerator1 + product;
                 if (denominator >= numerator1) {
-                    return uint160(Math.mulDiv(numerator1, sqrtPX96, denominator, Math.Rounding.Ceil));
+                    return
+                        uint160(Math.mulDiv(numerator1, sqrtPX96, denominator, Math.Rounding.Ceil));
                 }
             }
             return uint160(_divRoundingUp(numerator1, (numerator1 / sqrtPX96) + amount));
@@ -693,11 +767,12 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
     }
 
     /// @dev v3 SqrtPriceMath.getNextSqrtPriceFromAmount1RoundingDown.
-    function _getNextSqrtPriceFromAmount1RoundingDown(uint160 sqrtPX96, uint128 liquidity_, uint256 amount, bool add)
-        internal
-        pure
-        returns (uint160)
-    {
+    function _getNextSqrtPriceFromAmount1RoundingDown(
+        uint160 sqrtPX96,
+        uint128 liquidity_,
+        uint256 amount,
+        bool add
+    ) internal pure returns (uint160) {
         if (add) {
             uint256 quotient = Math.mulDiv(amount, Q96, liquidity_);
             return uint160(uint256(sqrtPX96) + quotient);
@@ -714,18 +789,24 @@ contract ConcentratedLiquidityLab is IConcentratedLiquidityLab {
     ///      tickUpper): the outside accumulators store "all growth on the far
     ///      side of the tick" relative to the current tick, so the inside slice
     ///      is global − below − above.
-    function _getFeeGrowthInside(int24 tickLower, int24 tickUpper, int24 tickCurrent, uint256 fg0, uint256 fg1)
-        internal
-        view
-        returns (uint256 inside0, uint256 inside1)
-    {
+    function _getFeeGrowthInside(
+        int24 tickLower,
+        int24 tickUpper,
+        int24 tickCurrent,
+        uint256 fg0,
+        uint256 fg1
+    ) internal view returns (uint256 inside0, uint256 inside1) {
         TickInfo storage lower = _tickInfo[tickLower];
         TickInfo storage upper = _tickInfo[tickUpper];
 
-        uint256 below0 = tickCurrent >= tickLower ? lower.feeGrowthOutside0 : fg0 - lower.feeGrowthOutside0;
-        uint256 below1 = tickCurrent >= tickLower ? lower.feeGrowthOutside1 : fg1 - lower.feeGrowthOutside1;
-        uint256 above0 = tickCurrent < tickUpper ? upper.feeGrowthOutside0 : fg0 - upper.feeGrowthOutside0;
-        uint256 above1 = tickCurrent < tickUpper ? upper.feeGrowthOutside1 : fg1 - upper.feeGrowthOutside1;
+        uint256 below0 =
+            tickCurrent >= tickLower ? lower.feeGrowthOutside0 : fg0 - lower.feeGrowthOutside0;
+        uint256 below1 =
+            tickCurrent >= tickLower ? lower.feeGrowthOutside1 : fg1 - lower.feeGrowthOutside1;
+        uint256 above0 =
+            tickCurrent < tickUpper ? upper.feeGrowthOutside0 : fg0 - upper.feeGrowthOutside0;
+        uint256 above1 =
+            tickCurrent < tickUpper ? upper.feeGrowthOutside1 : fg1 - upper.feeGrowthOutside1;
 
         return (fg0 - below0 - above0, fg1 - below1 - above1);
     }

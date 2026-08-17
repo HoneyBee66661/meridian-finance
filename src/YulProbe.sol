@@ -20,20 +20,14 @@ interface IYulProbe {
     /// @return rf Reserve factor.
     /// @return ts Last accrual timestamp.
     /// @return fl Flags bitfield.
-    function readHeaderSolidity()
-        external
-        view
-        returns (uint64 cf, uint64 rf, uint64 ts, uint64 fl);
+    function readHeaderSolidity() external view returns (uint64 cf, uint64 rf, uint64 ts, uint64 fl);
 
     /// @notice Read the four packed fields with one `sload` + three shifts.
     /// @return cf Collateral factor.
     /// @return rf Reserve factor.
     /// @return ts Last accrual timestamp.
     /// @return fl Flags bitfield.
-    function readHeaderAssembly()
-        external
-        view
-        returns (uint64 cf, uint64 rf, uint64 ts, uint64 fl);
+    function readHeaderAssembly() external view returns (uint64 cf, uint64 rf, uint64 ts, uint64 fl);
 
     /// @notice Read the four legacy (unpacked) slots via plain Solidity.
     /// @return cf Collateral factor.
@@ -78,16 +72,15 @@ interface IYulProbe {
 ///      0x00–0x3f as volatile scratch, never read unallocated memory, and
 ///      check returndatasize before decoding returndata.
 contract YulProbe is IYulProbe {
-
     /// @notice Packed market header — one slot, four 64-bit fields (Ch 6
     ///         packing discipline). Mirror of the layout Ch 20's
     ///         `MeridianVault` will use for a market.
     /// @dev Slots: 64+64+64+64 = 256 bits exactly.
     struct PackedHeader {
         uint64 collateralFactor; // WAD-scaled (1e18 = 100%)
-        uint64 reserveFactor;    // WAD-scaled
-        uint64 lastAccrualTs;    // block.timestamp of last accrual
-        uint64 flags;            // bitfield: 1 = paused, 2 = oracle stale, ...
+        uint64 reserveFactor; // WAD-scaled
+        uint64 lastAccrualTs; // block.timestamp of last accrual
+        uint64 flags; // bitfield: 1 = paused, 2 = oracle stale, ...
     }
 
     /// @notice The packed header (slot 0).
@@ -223,7 +216,7 @@ contract YulProbe is IYulProbe {
             let src := add(data, 0x20)
             let dst := add(out, 0x20)
             let end := add(src, and(add(len, 0x1f), not(0x1f)))
-            for { } lt(src, end) { } {
+            for {} lt(src, end) {} {
                 mstore(dst, mload(src))
                 src := add(src, 0x20)
                 dst := add(dst, 0x20)

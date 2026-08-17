@@ -30,7 +30,7 @@ contract MeridianVaultTest is Test {
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
-    uint256 internal constant LT = 1.05e18; // liquidation threshold (WAD HF cutoff)
+    uint256 internal constant LT = 0.8e18; // liquidation threshold (WAD); liquidation begins at LTV > LT
     uint256 internal constant ETH_PRICE = 2000e8; // 8-dec feed style
     uint256 internal constant USDC_PRICE = 1e8;
     uint256 internal constant CF = 7500; // 75%
@@ -45,7 +45,9 @@ contract MeridianVaultTest is Test {
         oracle.setPrice(address(usdc), USDC_PRICE);
         zeroModel = new FixedRateInterestRateModel(0, 8e17);
         rateModel = new FixedRateInterestRateModel(1e16, 8e17); // 1% per second
-        vault = new MeridianVault(address(eth), address(usdc), oracle, zeroModel, uint64(CF), LT, uint64(LI), uint64(RF));
+        vault = new MeridianVault(
+            address(eth), address(usdc), oracle, zeroModel, uint64(CF), LT, uint64(LI), uint64(RF)
+        );
 
         _fund(alice, 100e18, 1_000_000e6);
         _fund(bob, 100e18, 1_000_000e6);
@@ -100,7 +102,9 @@ contract MeridianVaultTest is Test {
     function _expectNotAdmin(address caller) internal {
         bytes32 role = vault.DEFAULT_ADMIN_ROLE(); // hoisted before any prank
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, role)
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, caller, role
+            )
         );
     }
 
@@ -151,11 +155,14 @@ contract MeridianVaultTest is Test {
         assertEq(vault.totalDebt(), 0);
     }
 
-    function test_borrow_exactlyCapacity_healthFactorOne() public {
+    function test_borrow_exactlyCapacity_healthFactorAboveOne() public {
         _supply(3000e6);
         _deposit(alice, 2e18);
         _borrow(alice, 3000e6);
-        assertEq(vault.healthFactor(alice), 1e18);
+        // At max borrow (LTV = CF = 75%), HF = LT/CF = 0.8/0.75 = 1.0667 > 1:
+        // the maximum borrower is healthy, never liquidatable.
+        assertEq(vault.healthFactor(alice), 1_066_666_666_666_666_666);
+        assertFalse(vault.isLiquidatable(alice));
         assertEq(vault.debtOf(alice), 3000e6);
     }
 
@@ -277,7 +284,9 @@ contract MeridianVaultTest is Test {
         _supply(3000e6);
         _deposit(alice, 1e18); // capacity 1500e6
         vm.expectRevert(
-            abi.encodeWithSelector(IMeridianVault.BorrowCapacityExceeded.selector, alice, 1_500_000_001, 1_500_000_000)
+            abi.encodeWithSelector(
+                IMeridianVault.BorrowCapacityExceeded.selector, alice, 1_500_000_001, 1_500_000_000
+            )
         );
         vm.prank(alice);
         vault.borrow(1_500_000_001);
@@ -285,14 +294,18 @@ contract MeridianVaultTest is Test {
 
     function test_borrow_undercollateralized_reverts() public {
         _supply(1000e6);
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.BorrowCapacityExceeded.selector, bob, 100e6, 0));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.BorrowCapacityExceeded.selector, bob, 100e6, 0)
+        );
         vm.prank(bob);
         vault.borrow(100e6);
     }
 
     function test_borrow_withoutLiquidity_reverts() public {
         _deposit(alice, 2e18); // capacity 3000e6, but no idle liquidity
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InsufficientLiquidity.selector, 100e6, 0));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InsufficientLiquidity.selector, 100e6, 0)
+        );
         vm.prank(alice);
         vault.borrow(100e6);
     }
@@ -302,14 +315,20 @@ contract MeridianVaultTest is Test {
         _deposit(alice, 2e18);
         _borrow(alice, 2000e6);
 
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.HealthFactorTooLow.selector, alice, 0, 1e18));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.HealthFactorTooLow.selector, alice, 0, 1e18)
+        );
         vm.prank(alice);
         vault.withdrawCollateral(2e18);
     }
 
     function test_withdraw_aboveCollateral_reverts() public {
         _deposit(alice, 2e18);
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InsufficientCollateral.selector, alice, 2e18 + 1, 2e18));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IMeridianVault.InsufficientCollateral.selector, alice, 2e18 + 1, 2e18
+            )
+        );
         vm.prank(alice);
         vault.withdrawCollateral(2e18 + 1);
     }
@@ -349,27 +368,40 @@ contract MeridianVaultTest is Test {
         _supply(3000e6);
         _deposit(alice, 2e18);
         _borrow(alice, 2000e6);
-        assertEq(vault.healthFactor(alice), 1.5e18);
+        // HF = 4000e8 * 0.8 / 2000e8 = 1.6 (the chapter's Production Example)
+        assertEq(vault.healthFactor(alice), 1.6e18);
 
         oracle.setPrice(address(eth), 1200e8); // -40%
-        assertEq(vault.healthFactor(alice), 0.9e18);
+        // HF = 2400e8 * 0.8 / 2000e8 = 0.96 < 1 -> liquidatable
+        assertEq(vault.healthFactor(alice), 0.96e18);
         assertTrue(vault.isLiquidatable(alice));
 
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.HealthFactorTooLow.selector, alice, 0, 1e18));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.HealthFactorTooLow.selector, alice, 0, 1e18)
+        );
         vm.prank(alice);
         vault.withdrawCollateral(2e18);
     }
 
     function test_priceDrop_bufferZone_liquidatableButSolvent() public {
-        oracle.setPrice(address(eth), 1500e8);
         _supply(3000e6);
-        _deposit(alice, 2e18); // capacity 2250e6 at 1500
+        _deposit(alice, 2e18); // collateral value 4000e8 at $2000
         _borrow(alice, 2200e6);
+        // HF = 4000e8 * 0.8 / 2200e8 = 1.4545 -> healthy, not liquidatable
+        assertEq(vault.healthFactor(alice), 1_454_545_454_545_454_545);
+        assertFalse(vault.isLiquidatable(alice));
 
+        // Price drops to $1370: collateral value 2740e8, LT-adjusted 2192e8,
+        // HF = 2192/2200 = 0.9964 < 1 -> liquidatable, yet still solvent:
+        // debt (2200e8) is below collateral value (2740e8) — the liquidatable-
+        // but-solvent zone (LTV 80.3% between LT 80% and 100%).
+        oracle.setPrice(address(eth), 1370e8);
         uint256 hf = vault.healthFactor(alice);
-        assertGt(hf, 1e18); // still solvent (above the hard line)
-        assertLt(hf, LT); // but inside the buffer zone
+        assertLt(hf, 1e18);
         assertTrue(vault.isLiquidatable(alice));
+        uint256 collValue = Math.mulDiv(2e18, 1370e8, 1e18);
+        uint256 debtValue = Math.mulDiv(2200e6, USDC_PRICE, 1e6);
+        assertLt(debtValue, collValue);
     }
 
     function test_priceRise_increasesCapacity() public {
@@ -386,16 +418,18 @@ contract MeridianVaultTest is Test {
         assertEq(vault.borrowCapacity(alice), 3000e6);
 
         vm.expectEmit(true, true, true, true, address(vault));
-        emit IMeridianVault.CollateralFactorSet(uint64(CF), uint64(8000));
-        vault.setCollateralFactor(8000);
+        emit IMeridianVault.CollateralFactorSet(uint64(CF), uint64(7900));
+        vault.setCollateralFactor(7900);
 
-        assertEq(vault.collateralFactorBps(), 8000);
-        assertEq(vault.borrowCapacity(alice), 3200e6);
+        assertEq(vault.collateralFactorBps(), 7900);
+        assertEq(vault.borrowCapacity(alice), 3160e6);
     }
 
     function test_supplyDebtLiquidity_enablesBorrowing() public {
         _deposit(alice, 2e18);
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InsufficientLiquidity.selector, 100e6, 0));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InsufficientLiquidity.selector, 100e6, 0)
+        );
         vm.prank(alice);
         vault.borrow(100e6);
 
@@ -422,13 +456,13 @@ contract MeridianVaultTest is Test {
     function test_setCollateralFactor_onlyAdmin() public {
         _expectNotAdmin(alice);
         vm.prank(alice);
-        vault.setCollateralFactor(8000);
+        vault.setCollateralFactor(7900);
     }
 
     function test_setLiquidationThreshold_onlyAdmin() public {
         _expectNotAdmin(alice);
         vm.prank(alice);
-        vault.setLiquidationThreshold(1.1e18);
+        vault.setLiquidationThreshold(0.9e18);
     }
 
     function test_setLiquidationIncentive_onlyAdmin() public {
@@ -470,50 +504,132 @@ contract MeridianVaultTest is Test {
     // ---- Admin parameter validation ----------------------------------------------
 
     function test_setCollateralFactor_above10000_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(10_001)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(10_001))
+        );
         vault.setCollateralFactor(10_001);
     }
 
-    function test_setLiquidationThreshold_atOne_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidLiquidationThreshold.selector, 1e18));
-        vault.setLiquidationThreshold(1e18);
+    function test_setCollateralFactor_atOrAboveLiquidationThreshold_reverts() public {
+        // Ch 39 audit finding (full-system audit, invariant I4): the setter
+        // previously checked only `CF <= BPS`, so governance could raise CF
+        // to or above LT and silently erase the safety buffer — a max-borrow
+        // position would sit at HF <= 1 (liquidatable on entry). The
+        // cross-check now mirrors the constructor: LT * BPS > CF * WAD.
+        // Boundary cases: CF == LT (8000 == 0.8e18) and CF > LT (9000) both
+        // revert; CF just below LT (7999) is valid and keeps HF >= 1.0001.
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(8000))
+        );
+        vault.setCollateralFactor(8000);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(9000))
+        );
+        vault.setCollateralFactor(9000);
+
+        vault.setCollateralFactor(7999);
+        assertEq(vault.collateralFactorBps(), 7999);
+    }
+
+    function test_setLiquidationThreshold_atCollateralFactor_reverts() public {
+        // LT must sit strictly above the collateral factor or the safety
+        // buffer vanishes: at LT == CF (75%) a max-borrow position would sit
+        // at HF == 1, right on the liquidation line.
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidLiquidationThreshold.selector, 0.75e18)
+        );
+        vault.setLiquidationThreshold(0.75e18);
     }
 
     function test_setLiquidationIncentive_zero_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidLiquidationIncentive.selector, uint64(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidLiquidationIncentive.selector, uint64(0))
+        );
         vault.setLiquidationIncentive(0);
     }
 
     function test_setReserveFactor_above10000_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidReserveFactor.selector, uint64(10_001)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidReserveFactor.selector, uint64(10_001))
+        );
         vault.setReserveFactor(10_001);
     }
 
     // ---- Constructor guards ---------------------------------------------------------
 
     function test_constructor_zeroCollateralAddress_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidConstructorAddress.selector, address(0)));
-        new MeridianVault(address(0), address(usdc), oracle, zeroModel, uint64(CF), LT, uint64(LI), uint64(RF));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidConstructorAddress.selector, address(0))
+        );
+        new MeridianVault(
+            address(0), address(usdc), oracle, zeroModel, uint64(CF), LT, uint64(LI), uint64(RF)
+        );
     }
 
     function test_constructor_zeroOracleAddress_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidConstructorAddress.selector, address(0)));
-        new MeridianVault(address(eth), address(usdc), MockOracle(address(0)), zeroModel, uint64(CF), LT, uint64(LI), uint64(RF));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidConstructorAddress.selector, address(0))
+        );
+        new MeridianVault(
+            address(eth),
+            address(usdc),
+            MockOracle(address(0)),
+            zeroModel,
+            uint64(CF),
+            LT,
+            uint64(LI),
+            uint64(RF)
+        );
     }
 
-    function test_constructor_liquidationThresholdAtOne_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidLiquidationThreshold.selector, 1e18));
-        new MeridianVault(address(eth), address(usdc), oracle, zeroModel, uint64(CF), 1e18, uint64(LI), uint64(RF));
+    function test_constructor_liquidationThresholdAboveOne_reverts() public {
+        // LT is a WAD fraction of collateral value; > 1e18 is off-axis.
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidLiquidationThreshold.selector, 1.05e18)
+        );
+        new MeridianVault(
+            address(eth),
+            address(usdc),
+            oracle,
+            zeroModel,
+            uint64(CF),
+            1.05e18,
+            uint64(LI),
+            uint64(RF)
+        );
     }
 
     function test_constructor_collateralFactorAbove10000_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(10_001)));
-        new MeridianVault(address(eth), address(usdc), oracle, zeroModel, uint64(10_001), LT, uint64(LI), uint64(RF));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidCollateralFactor.selector, uint64(10_001))
+        );
+        new MeridianVault(
+            address(eth),
+            address(usdc),
+            oracle,
+            zeroModel,
+            uint64(10_001),
+            LT,
+            uint64(LI),
+            uint64(RF)
+        );
     }
 
     function test_constructor_reserveFactorAbove10000_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMeridianVault.InvalidReserveFactor.selector, uint64(10_001)));
-        new MeridianVault(address(eth), address(usdc), oracle, zeroModel, uint64(CF), LT, uint64(LI), uint64(10_001));
+        vm.expectRevert(
+            abi.encodeWithSelector(IMeridianVault.InvalidReserveFactor.selector, uint64(10_001))
+        );
+        new MeridianVault(
+            address(eth),
+            address(usdc),
+            oracle,
+            zeroModel,
+            uint64(CF),
+            LT,
+            uint64(LI),
+            uint64(10_001)
+        );
     }
 
     // ---- Gas probes (log-only; `.gas-snapshot` rows are the gate, Ch 13) ----------

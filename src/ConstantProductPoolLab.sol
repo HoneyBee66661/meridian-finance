@@ -97,7 +97,11 @@ abstract contract AbstractConstantProductPool is IConstantProductPoolLab {
     ///      solves it: out = y − k/(x + in·(1−f)). Fee applied to the INPUT —
     ///      the trader's effective input is in·997/1000, so the pool records
     ///      the full `in` as reserve growth and the fee drifts k upward.
-    function getAmountOut(uint256 amountIn, bool zeroForOne) public view returns (uint256 amountOut) {
+    function getAmountOut(uint256 amountIn, bool zeroForOne)
+        public
+        view
+        returns (uint256 amountOut)
+    {
         if (amountIn == 0) revert ZeroAmount();
         (uint256 reserveIn, uint256 reserveOut) =
             zeroForOne ? (_reserve0, _reserve1) : (_reserve1, _reserve0);
@@ -148,7 +152,11 @@ abstract contract AbstractConstantProductPool is IConstantProductPoolLab {
     ///      shares burned to address(0). Later mints: the SMALLER ratio
     ///      min(Δ0·TS/reserve0, Δ1·TS/reserve1) — the depositor who brings an
     ///      imbalanced pair gets the binding ratio and the excess is a donation.
-    function addLiquidity(uint256 amount0, uint256 amount1) external lock returns (uint256 liquidity) {
+    function addLiquidity(uint256 amount0, uint256 amount1)
+        external
+        lock
+        returns (uint256 liquidity)
+    {
         if (amount0 == 0 || amount1 == 0) revert ZeroAmount();
 
         _token0.safeTransferFrom(msg.sender, address(this), amount0);

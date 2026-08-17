@@ -50,7 +50,7 @@ contract EvmMiniature {
     ///         observe the caller's memory, only storage.
     /// @param target Contract whose `poke` function writes a storage slot.
     function callIsolated(address target) external {
-        (bool ok, ) = target.call(abi.encodeWithSignature("poke()"));
+        (bool ok,) = target.call(abi.encodeWithSignature("poke()"));
         require(ok, "call failed");
     }
 }

@@ -32,10 +32,16 @@ interface IArithProbe {
     /// @notice Scale an 18-decimal WAD amount down to `decimals`.
     function fromWad(uint256 amount, uint8 decimals) external pure returns (uint256);
     /// @notice Linear per-second accrual: r·t in RAY (floor).
-    function accrueLinear(uint256 ratePerSecond, uint256 secondsElapsed) external pure returns (uint256);
-    /// @notice Quadratic bias term (r·t)²/2 — borrower-favorable compounding
-    ///         correction (locked convention: per-second linear + r²/2 bias).
-    function accrueQuadratic(uint256 ratePerSecond, uint256 secondsElapsed) external pure returns (uint256);
+    function accrueLinear(uint256 ratePerSecond, uint256 secondsElapsed)
+        external
+        pure
+        returns (uint256);
+    /// @notice Quadratic compounding premium (r·t)²/2 — the discrete-accrual
+    ///         correction (locked convention: per-second linear + r²/2 premium).
+    function accrueQuadratic(uint256 ratePerSecond, uint256 secondsElapsed)
+        external
+        pure
+        returns (uint256);
     /// @notice Total accrued: linear + quadratic bias.
     function accrue(uint256 ratePerSecond, uint256 secondsElapsed) external pure returns (uint256);
     /// @notice 10^18.

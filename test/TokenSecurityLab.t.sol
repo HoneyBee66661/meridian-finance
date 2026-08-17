@@ -35,10 +35,12 @@ contract TokenSecurityLabTest is Test {
     uint256 internal constant INITIAL_SUPPLY = 10_000_000e18;
     uint256 internal constant ALICE_FUNDING = 1_000e18;
 
-    bytes32 internal constant PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-    bytes32 internal constant DOMAIN_TYPEHASH =
-        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 internal constant PERMIT_TYPEHASH = keccak256(
+        "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+    );
+    bytes32 internal constant DOMAIN_TYPEHASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
 
     LabToken internal lab;
     LabTokenWithHelpers internal labh;
@@ -119,7 +121,9 @@ contract TokenSecurityLabTest is Test {
         labh.transferFrom(alice, bob, 100);
 
         // The atomic reduce cannot go below zero — no fresh allowance appears.
-        vm.expectRevert(abi.encodeWithSelector(ITokenSecurityLab.InsufficientBalance.selector, 0, 50));
+        vm.expectRevert(
+            abi.encodeWithSelector(ITokenSecurityLab.InsufficientBalance.selector, 0, 50)
+        );
         vm.prank(alice);
         labh.decreaseAllowance(bob, 50);
 
@@ -158,7 +162,9 @@ contract TokenSecurityLabTest is Test {
         lab.approve(bob, 0); // the zero step lands first
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 0, 100));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 0, 100)
+        );
         vm.prank(bob); // front-run of the second step: nothing to take
         lab.transferFrom(alice, bob, 100);
 
@@ -207,7 +213,9 @@ contract TokenSecurityLabTest is Test {
         mer.transferFrom(alice, bob, 50);
         assertEq(mer.balanceOf(bob), 50);
 
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 0, 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 0, 1)
+        );
         vm.prank(bob);
         mer.transferFrom(alice, bob, 1);
     }
@@ -232,7 +240,9 @@ contract TokenSecurityLabTest is Test {
         // The user's own permit rebuilds the struct hash with nonce 1 (the
         // current one), so the recovered signer differs from Alice.
         address recovered = ECDSA.recover(_permitDigest(alice, bob, 50, 1, deadline), v, r, s);
-        vm.expectRevert(abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, recovered, alice));
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC20Permit.ERC2612InvalidSigner.selector, recovered, alice)
+        );
         mer.permit(alice, bob, 50, deadline, v, r, s);
 
         assertEq(mer.nonces(alice), 1); // the failed permit burned nothing
@@ -266,7 +276,9 @@ contract TokenSecurityLabTest is Test {
         // OZ `_update` moves the net 99 first (99 from 99, ok), then burns the
         // 1 fee from the now-empty vault -> ERC20InsufficientBalance(vault, 0, 1).
         vm.expectRevert(
-            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, address(naiveFee), 0, 1)
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector, address(naiveFee), 0, 1
+            )
         );
         vm.prank(alice);
         naiveFee.redeem(100);
@@ -310,7 +322,9 @@ contract TokenSecurityLabTest is Test {
 
     function test_rebase_guardrail_rejectsFullCollapse() public {
         reb.mint(alice, 100);
-        vm.expectRevert(abi.encodeWithSelector(ITokenSecurityLab.RebaseOutOfBounds.selector, int256(-10_000)));
+        vm.expectRevert(
+            abi.encodeWithSelector(ITokenSecurityLab.RebaseOutOfBounds.selector, int256(-10_000))
+        );
         reb.rebase(-10_000);
     }
 
@@ -337,7 +351,9 @@ contract TokenSecurityLabTest is Test {
 
         // The last redeemer hits the rebaser's own balance check (the gons
         // ledger is empty).
-        vm.expectRevert(abi.encodeWithSelector(ITokenSecurityLab.InsufficientBalance.selector, 0, 100));
+        vm.expectRevert(
+            abi.encodeWithSelector(ITokenSecurityLab.InsufficientBalance.selector, 0, 100)
+        );
         vm.prank(bob); // last redeemer is stuck
         naiveRebase.redeem(100);
     }
@@ -422,7 +438,9 @@ contract TokenSecurityLabTest is Test {
     /// @dev Conservation under a bounded positive rebase: full redemption pays
     ///      everyone their share and leaves the vault empty (within the 2-wei
     ///      floor-rounding slack per conversion).
-    function testFuzz_fractionalRebaseVault_conservation(uint256 a_, uint256 b_, uint256 bps_) public {
+    function testFuzz_fractionalRebaseVault_conservation(uint256 a_, uint256 b_, uint256 bps_)
+        public
+    {
         uint256 a = bound(a_, 1, 1e30);
         uint256 b = bound(b_, 1, 1e30);
         uint256 bps = bound(bps_, 1, 9000);
@@ -520,12 +538,16 @@ contract TokenSecurityLabTest is Test {
 
     // ── helpers (Ch 14 pattern) ─────────────────────────────────────────────
 
-    function _permitDigest(address owner_, address spender_, uint256 value_, uint256 nonce_, uint256 deadline_)
-        internal
-        view
-        returns (bytes32)
-    {
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner_, spender_, value_, nonce_, deadline_));
+    function _permitDigest(
+        address owner_,
+        address spender_,
+        uint256 value_,
+        uint256 nonce_,
+        uint256 deadline_
+    ) internal view returns (bytes32) {
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner_, spender_, value_, nonce_, deadline_)
+        );
         return keccak256(abi.encodePacked("\x19\x01", mer.DOMAIN_SEPARATOR(), structHash));
     }
 
